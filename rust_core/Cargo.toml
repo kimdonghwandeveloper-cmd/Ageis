@@ -1,0 +1,34 @@
+[package]
+name = "ageis-core"       # 크레이트(패키지) 이름
+version = "0.1.0"             # 시맨틱 버전
+edition = "2021"              # Rust 에디션 (2021 = 최신 안정판 기능 세트)
+
+[[bin]]
+name = "ageis-core"       # 빌드되는 실행 바이너리의 이름
+path = "src/main.rs"          # 바이너리 진입점 파일 경로
+
+[dependencies]
+# --- gRPC 통신 ---
+tonic = "0.12"                # gRPC 프레임워크 (서버/클라이언트 양쪽 지원)
+prost = "0.13"                # protobuf 메시지의 Rust 구조체 생성 및 직렬화
+tokio-stream = "0.1"          # 비동기 스트림 유틸리티 (gRPC 양방향 스트리밍에 필요)
+
+# --- 비동기 런타임 ---
+tokio = { version = "1", features = ["full"] }  # 비동기 런타임 (네트워크, 타이머, 프로세스 등 전체 기능)
+
+# --- 파일시스템 ---
+dunce = "1"                   # Windows에서 UNC 경로(\\?\) 없이 경로 정규화 (크로스플랫폼 대응)
+
+# --- 로깅 ---
+tracing = "0.1"               # 구조화된 로깅 프레임워크 (info!, warn!, error! 매크로)
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }  # 로그 출력 + RUST_LOG 환경변수 필터링
+
+# --- CLI 인자 파싱 ---
+clap = { version = "4", features = ["derive"] }  # 커맨드라인 인자 파서 (derive 매크로로 구조체에서 자동 생성)
+
+[dev-dependencies]
+tempfile = "3"                # 테스트용 임시 디렉토리/파일 생성 (테스트 종료 시 자동 삭제)
+tokio-stream = "0.1"          # 테스트에서 스트림 관련 유틸리티 사용
+
+[build-dependencies]
+tonic-build = "0.12"          # 빌드 시 .proto 파일 → Rust 코드 자동 생성

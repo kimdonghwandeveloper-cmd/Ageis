@@ -1,0 +1,30 @@
+[project]
+name = "ageis-agent"          # 패키지 이름
+version = "0.1.0"                 # 시맨틱 버전
+description = "Ageis AI Agent - Python 마이크로서비스 레이어"
+requires-python = ">=3.10"        # 최소 Python 버전 (match/case 문법, 타입 힌트 등)
+
+dependencies = [
+    "beautifulsoup4>=4.14.3",
+    # --- Phase 1: gRPC 통신 ---
+    "grpcio>=1.65",               # gRPC 런타임 (Rust 코어 데몬과 통신)
+    "grpcio-tools>=1.65",         # protoc 파이썬 플러그인 (.proto → _pb2.py 코드 생성)
+    # --- Phase 2: LLM + 도구 (미리 선언, Phase 2에서 활성화) ---
+    # "ollama>=0.3",              # Ollama 파이썬 클라이언트 (로컬 LLM 호출)
+    # "httpx>=0.27",              # 비동기 HTTP 클라이언트 (웹 크롤러용)
+    # "beautifulsoup4>=4.12",     # HTML 파서 (웹 크롤러용)
+    "httpx>=0.28.1",
+    "ollama>=0.6.1",
+]
+
+# setuptools에게 이 프로젝트는 개별 모듈들의 모음임을 명시
+# flat layout에서 자동 탐색 대신 수동 지정
+[tool.setuptools]
+py-modules = ["main", "grpc_client", "generate_proto"]  # 최상위 모듈 목록
+
+[tool.setuptools.packages.find]
+include = ["tools*"]              # tools/ 서브패키지 포함
+
+[build-system]
+requires = ["setuptools>=75"]     # 빌드 시스템
+build-backend = "setuptools.build_meta"
