@@ -1,75 +1,22 @@
 """
-main.py — Python 에이전트 진입점 (Phase 2 완료 버전)
+main.py — Python 에이전트 진입점 (Refactored)
 
 역할:
-1. 사용자 입력을 받음
-2. Router를 통해 의도 분류 (CHAT, FILE, WEB, TASK 등)
-3. 적절한 핸들러(ReAct Agent 등)로 라우팅하여 실행
-4. 결과 반환
+1. 커맨드라인 인자 파싱 (--cli, --web 등)
+2. 실행 모드에 따라 적절한 UI 진입점 호출
 """
 
 import sys
-# Windows 콘솔 인코딩 문제 해결을 위해 필요할 수 있음
+import argparse
+from router import classify_intent
+from core_logic import handle_chat, handle_task
+
+# Windows 콘솔 인코딩 문제 해결
 sys.stdout.reconfigure(encoding='utf-8')
 
-from datetime import datetime
-from router import classify_intent
-from react_loop import ReActAgent
-from memory import AgentMemory
-from persona import build_system_prompt
-from tools.file_reader import read_file_tool, write_file_tool
-from tools.web_scraper import web_scrape_tool
-import ollama
-
-# 도구 등록
-TOOLS = {
-    "read_file": read_file_tool,
-    "write_file": write_file_tool,
-    "web_scrape": web_scrape_tool,
-}
-
-# 장기 기억 인스턴스 (Phase 3)
-memory = AgentMemory()
-
-# 에이전트 인스턴스 생성 (메모리 주입)
-agent = ReActAgent(tools=TOOLS, model_name="llama3.2", memory=memory)
-
-def handle_chat(user_input: str):
-    """단순 대화 처리 (ReAct 루프 없이 바로 응답, 페르소나+기억 적용)"""
-    print("[Main] Mode: CHAT")
-    system_prompt = build_system_prompt(user_input, memory)
-    response = ollama.chat(
-        model="llama3.2",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_input},
-        ]
-    )
-    answer = response["message"]["content"]
-    # 대화 내용을 장기 기억에 저장
-    memory.save(
-        f"[Chat] User: {user_input}\nAgent: {answer}",
-        metadata={"type": "chat", "timestamp": datetime.now().isoformat()}
-    )
-    return answer
-
-def handle_task(user_input: str):
-    """복합 작업 처리 (ReAct 루프 사용)"""
-    print("[Main] Mode: TASK (ReAct)")
-    return agent.run(user_input)
-
-def handle_file(user_input: str):
-    """파일 관련 작업도 ReAct 루프에 위임 (도구 사용 필요하므로)"""
-    print("[Main] Mode: FILE (delegating to ReAct)")
-    return agent.run(user_input)
-
-def handle_web(user_input: str):
-    """웹 검색 작업도 ReAct 루프에 위임"""
-    print("[Main] Mode: WEB (delegating to ReAct)")
-    return agent.run(user_input)
-
-def main():
-    print("=== Ageis Agent (Phase 3: The Soul) ===")
+def standard_main():
+    """기본 터미널 모드 (Plain Text)"""
+    print("=== Ageis Agent (Standard Mode) ===")
     print("Type '/quit' to exit.\n")
     
     while True:
@@ -90,11 +37,11 @@ def main():
             if intent == "CHAT":
                 response = handle_chat(user_input)
             elif intent in ["FILE", "WEB", "TASK"]:
-                response = handle_task(user_input) # FILE, WEB도 ReAct가 처리하도록 통일
+                response = handle_task(user_input)
             elif intent == "PERSONA":
-                response = "persona.yaml 파일을 직접 수정한 후 재시작해 주세요. (Agent_Workspace/persona.yaml)"
+                response = "persona.yaml 파일을 직접 수정한 후 재시작해 주세요."
             else:
-                response = handle_chat(user_input) # 기본
+                response = handle_chat(user_input)
 
             # 3. 결과 출력
             print(f"\nAgent: {response}")
@@ -104,6 +51,21 @@ def main():
             break
         except Exception as e:
             print(f"\n[Error] {e}")
+
+def main():
+    parser = argparse.ArgumentParser(description="Ageis AI Agent")
+    parser.add_argument("--cli", action="store_true", help="Run with Rich CLI Dashboard")
+    parser.add_argument("--web", action="store_true", help="Run with Web UI")
+    args = parser.parse_args()
+
+    if args.cli:
+        from cli import cli_main
+        cli_main(None) # agent 인스턴스는 core_logic에서 관리되므로 전달 불필요하거나 나중에 리팩토링
+    elif args.web:
+        from web_ui import web_main
+        web_main()
+    else:
+        standard_main()
 
 if __name__ == "__main__":
     main()
