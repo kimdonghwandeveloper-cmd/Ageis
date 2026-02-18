@@ -64,3 +64,18 @@ Agent_Workspace/.chroma/
 
 # Logs
 *.log
+
+# Test & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Linters / Type checkers
+.ruff_cache/
+.mypy_cache/
+
+# Windows
+desktop.ini
+
+# uv cache
+.uv/

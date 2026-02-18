@@ -1,6 +1,7 @@
 import json
 import re
 import ollama
+from datetime import datetime
 
 MAX_ITERATIONS = 10
 
@@ -25,11 +26,12 @@ Final Answer를 찾았다면 더 이상 Action을 생성하지 마십시오.
 """
 
 class ReActAgent:
-    def __init__(self, tools: dict, model_name: str = "llama3.2"):
+    def __init__(self, tools: dict, model_name: str = "llama3.2", memory=None):
         self.tools = tools          # {"tool_name": function}
         self.model_name = model_name
+        self.memory = memory        # AgentMemory 인스턴스 (Phase 3)
         self.history = []
-        
+
         # 도구 설명 문자열 생성 (프롬프트 주입용)
         self.tool_desc_str = self._generate_tool_descriptions()
 
@@ -44,10 +46,17 @@ class ReActAgent:
     def run(self, task: str) -> str:
         """사용자 태스크를 받아 ReAct 루프를 실행하고 최종 답변을 반환합니다."""
         print(f"\n[ReAct] Task started: {task}")
-        
-        # 시스템 프롬프트 구성
-        system_prompt = REACT_SYSTEM_PROMPT.format(tool_descriptions=self.tool_desc_str)
-        
+
+        # 시스템 프롬프트 구성: 페르소나+기억 + 도구 설명 결합
+        react_prompt = REACT_SYSTEM_PROMPT.format(tool_descriptions=self.tool_desc_str)
+
+        if self.memory:
+            from persona import build_system_prompt
+            persona_prompt = build_system_prompt(task, self.memory)
+            system_prompt = persona_prompt + "\n\n" + react_prompt
+        else:
+            system_prompt = react_prompt
+
         messages = [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": f"Task: {task}"}
@@ -68,6 +77,12 @@ class ReActAgent:
             # 2. Final Answer 확인
             if "Final Answer:" in output:
                 final_answer = output.split("Final Answer:")[-1].strip()
+                # Phase 3: 대화 내용을 장기 기억에 저장
+                if self.memory:
+                    self.memory.save(
+                        f"[Task] {task}\n[Answer] {final_answer}",
+                        metadata={"type": "task", "timestamp": datetime.now().isoformat()}
+                    )
                 return final_answer
 
             # 3. Action 파싱

@@ -12,8 +12,11 @@ import sys
 # Windows 콘솔 인코딩 문제 해결을 위해 필요할 수 있음
 sys.stdout.reconfigure(encoding='utf-8')
 
+from datetime import datetime
 from router import classify_intent
 from react_loop import ReActAgent
+from memory import AgentMemory
+from persona import build_system_prompt
 from tools.file_reader import read_file_tool, write_file_tool
 from tools.web_scraper import web_scrape_tool
 import ollama
@@ -25,17 +28,30 @@ TOOLS = {
     "web_scrape": web_scrape_tool,
 }
 
-# 에이전트 인스턴스 생성 (한 번 로드)
-agent = ReActAgent(tools=TOOLS, model_name="llama3.2")
+# 장기 기억 인스턴스 (Phase 3)
+memory = AgentMemory()
+
+# 에이전트 인스턴스 생성 (메모리 주입)
+agent = ReActAgent(tools=TOOLS, model_name="llama3.2", memory=memory)
 
 def handle_chat(user_input: str):
-    """단순 대화 처리 (ReAct 루프 없이 바로 응답)"""
+    """단순 대화 처리 (ReAct 루프 없이 바로 응답, 페르소나+기억 적용)"""
     print("[Main] Mode: CHAT")
+    system_prompt = build_system_prompt(user_input, memory)
     response = ollama.chat(
         model="llama3.2",
-        messages=[{"role": "user", "content": user_input}]
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_input},
+        ]
     )
-    return response["message"]["content"]
+    answer = response["message"]["content"]
+    # 대화 내용을 장기 기억에 저장
+    memory.save(
+        f"[Chat] User: {user_input}\nAgent: {answer}",
+        metadata={"type": "chat", "timestamp": datetime.now().isoformat()}
+    )
+    return answer
 
 def handle_task(user_input: str):
     """복합 작업 처리 (ReAct 루프 사용)"""
@@ -53,7 +69,7 @@ def handle_web(user_input: str):
     return agent.run(user_input)
 
 def main():
-    print("=== Ageis Agent (Phase 2: The Brain) ===")
+    print("=== Ageis Agent (Phase 3: The Soul) ===")
     print("Type '/quit' to exit.\n")
     
     while True:
@@ -76,7 +92,7 @@ def main():
             elif intent in ["FILE", "WEB", "TASK"]:
                 response = handle_task(user_input) # FILE, WEB도 ReAct가 처리하도록 통일
             elif intent == "PERSONA":
-                response = "Phase 3에서 구현될 기능입니다 (Persona Update)."
+                response = "persona.yaml 파일을 직접 수정한 후 재시작해 주세요. (Agent_Workspace/persona.yaml)"
             else:
                 response = handle_chat(user_input) # 기본
 
