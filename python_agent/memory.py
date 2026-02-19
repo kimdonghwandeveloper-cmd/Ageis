@@ -7,17 +7,26 @@ memory.py — 장기 기억 모듈 (ChromaDB + Ollama 임베딩)
 - RAG 파이프라인의 핵심 컴포넌트
 """
 
+import sys
 import uuid
 from pathlib import Path
 import chromadb
 import ollama
 
-# 프로젝트 루트 기준 기본 경로 계산
-_DEFAULT_CHROMA_DIR = str(Path(__file__).resolve().parent.parent / "Agent_Workspace" / ".chroma")
+
+def _default_chroma_dir() -> str:
+    """번들(frozen) 여부에 따라 ChromaDB 저장 경로 반환."""
+    if getattr(sys, 'frozen', False):
+        base = Path(sys.executable).parent
+    else:
+        base = Path(__file__).resolve().parent.parent
+    return str(base / "Agent_Workspace" / ".chroma")
 
 
 class AgentMemory:
-    def __init__(self, persist_dir: str = _DEFAULT_CHROMA_DIR):
+    def __init__(self, persist_dir: str = None):
+        if persist_dir is None:
+            persist_dir = _default_chroma_dir()
         self.client = chromadb.PersistentClient(path=persist_dir)
         self.collection = self.client.get_or_create_collection(
             name="agent_memory",

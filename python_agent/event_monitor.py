@@ -7,6 +7,7 @@ watchdog으로 Agent_Workspace 하위 경로를 감시합니다.
 """
 import asyncio
 import fnmatch
+import sys
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -15,7 +16,13 @@ import yaml
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-_WATCH_RULES_FILE = Path(__file__).resolve().parent.parent / "Agent_Workspace" / "watch_rules.yaml"
+
+def _watch_rules_file() -> Path:
+    if getattr(sys, 'frozen', False):
+        base = Path(sys.executable).parent
+    else:
+        base = Path(__file__).resolve().parent.parent
+    return base / "Agent_Workspace" / "watch_rules.yaml"
 
 
 class _AgentEventHandler(FileSystemEventHandler):
@@ -83,15 +90,17 @@ class EventMonitor:
     # ── YAML 영속성 ──────────────────────────────────────────────────────────
 
     def _load_rules(self) -> list[dict]:
-        if _WATCH_RULES_FILE.exists():
-            with _WATCH_RULES_FILE.open("r", encoding="utf-8") as f:
+        f_path = _watch_rules_file()
+        if f_path.exists():
+            with f_path.open("r", encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
             return data.get("watches", [])
         return []
 
     def _save_rules(self):
-        _WATCH_RULES_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with _WATCH_RULES_FILE.open("w", encoding="utf-8") as f:
+        f_path = _watch_rules_file()
+        f_path.parent.mkdir(parents=True, exist_ok=True)
+        with f_path.open("w", encoding="utf-8") as f:
             yaml.dump(
                 {"watches": self._rules},
                 f,

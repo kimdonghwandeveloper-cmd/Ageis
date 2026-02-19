@@ -54,7 +54,7 @@ def cli_main(agent):
     session = PromptSession(history=FileHistory(history_file))
 
     from router import classify_intent
-    from core_logic import handle_chat, handle_task
+    from core_logic import handle_chat, handle_task, handle_society
 
     while True:
         try:
@@ -81,6 +81,8 @@ def cli_main(agent):
                     # 복합 작업은 내부 로그가 많으므로, ReAct의 print 출력이 Spinner와 겹치지 않게 주의 필요
                     # 여기서는 일단 실행 (ReAct 내부 print는 콘솔에 직접 찍힘)
                     response = handle_task(user_input)
+                elif intent == "SOCIETY":
+                    response = handle_society(user_input)
                 elif intent == "PERSONA":
                     response = "persona.yaml 파일을 직접 수정한 후 재시작해 주세요."
                 else:

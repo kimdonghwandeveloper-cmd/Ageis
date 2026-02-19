@@ -35,6 +35,7 @@ dependencies = [
     # --- Phase 7-B: Event Monitor ---
     "watchdog>=6.0.0",         # 파일시스템 이벤트 감시
     "python-multipart>=0.0.22",
+    "pyinstaller>=6.19.0",
 ]
 
 # setuptools에게 이 프로젝트는 개별 모듈들의 모음임을 명시

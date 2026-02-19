@@ -728,7 +728,20 @@ async def health_check():
 @app.post("/api/chat", response_model=ChatResponse)
 async def api_chat(req: ChatRequest):
     intent = classify_intent(req.message)
-    response = handle_chat(req.message)
+    
+    # Intent-based Routing
+    loop = asyncio.get_event_loop()
+    
+    if intent == "SOCIETY":
+        # Multi-Agent
+        response = await loop.run_in_executor(None, handle_society, req.message)
+    elif intent in ["FILE", "WEB", "TASK"]:
+        # ReAct Single Agent
+        response = await loop.run_in_executor(None, handle_task, req.message)
+    else:
+        # Simple Chat
+        response = handle_chat(req.message)
+        
     return ChatResponse(response=response, intent=intent)
 
 
@@ -871,16 +884,15 @@ async def get_root():
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    try:
-        while True:
+    loop = asyncio.get_event_loop()
+    while True:
+        try:
             user_input = await websocket.receive_text()
-            intent = classify_intent(user_input)
 
-            if intent == "CHAT":
-                response = handle_chat(user_input)
-            elif intent in ("FILE", "WEB", "TASK"):
-                response = handle_task(user_input)
-            elif intent == "PERSONA":
+            # 의도 분류 (blocking → executor)
+            intent = await loop.run_in_executor(None, classify_intent, user_input)
+
+            if intent == "PERSONA":
                 response = "persona.yaml 파일을 직접 수정한 후 재시작해 주세요."
             elif intent == "VISION":
                 response = "이미지를 분석하려면 🖼 버튼으로 이미지를 첨부해 주세요."
@@ -889,13 +901,28 @@ async def websocket_endpoint(websocket: WebSocket):
             elif intent == "SCHEDULE":
                 response = "⚙️ 자동화 탭에서 스케줄을 등록하거나 관리할 수 있습니다."
             elif intent == "SOCIETY":
-                response = handle_society(user_input)
+                # 멀티에이전트 파이프라인 (blocking → executor)
+                response = await loop.run_in_executor(None, handle_society, user_input)
+            elif intent in ("FILE", "WEB", "TASK"):
+                # ReAct 루프 (blocking → executor)
+                response = await loop.run_in_executor(None, handle_task, user_input)
             else:
-                response = handle_chat(user_input)
+                # CHAT: 단순 대화 (blocking → executor)
+                response = await loop.run_in_executor(None, handle_chat, user_input)
 
             await websocket.send_text(response)
-    except Exception as e:
-        print(f"[WebSocket Error] {e}")
+
+        except Exception as e:
+            err_msg = str(e)
+            print(f"[WebSocket Error] {err_msg}")
+            # WebSocket 연결 끊김(disconnect)이면 루프 종료
+            if "disconnect" in err_msg.lower() or "1000" in err_msg or "1001" in err_msg:
+                break
+            # 그 외 처리 오류는 사용자에게 에러 메시지 전송 후 계속
+            try:
+                await websocket.send_text(f"[오류] 처리 중 문제가 발생했습니다: {err_msg}")
+            except Exception:
+                break
 
 
 # ─── 진입점 ──────────────────────────────────────────────────────────────

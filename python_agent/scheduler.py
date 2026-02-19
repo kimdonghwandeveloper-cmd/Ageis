@@ -5,6 +5,7 @@ APScheduler AsyncIOScheduler를 사용해 cron 기반 태스크를 실행합니�
 스케줄 규칙은 Agent_Workspace/schedules.yaml에 영구 저장합니다.
 """
 import asyncio
+import sys
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -13,7 +14,13 @@ import yaml
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 
-_SCHEDULES_FILE = Path(__file__).resolve().parent.parent / "Agent_Workspace" / "schedules.yaml"
+
+def _schedules_file() -> Path:
+    if getattr(sys, 'frozen', False):
+        base = Path(sys.executable).parent
+    else:
+        base = Path(__file__).resolve().parent.parent
+    return base / "Agent_Workspace" / "schedules.yaml"
 
 
 class AgentScheduler:
@@ -29,15 +36,17 @@ class AgentScheduler:
     # ── YAML 영속성 ──────────────────────────────────────────────────────────
 
     def _load_rules(self) -> list[dict]:
-        if _SCHEDULES_FILE.exists():
-            with _SCHEDULES_FILE.open("r", encoding="utf-8") as f:
+        f_path = _schedules_file()
+        if f_path.exists():
+            with f_path.open("r", encoding="utf-8") as f:
                 data = yaml.safe_load(f) or {}
             return data.get("schedules", [])
         return []
 
     def _save_rules(self):
-        _SCHEDULES_FILE.parent.mkdir(parents=True, exist_ok=True)
-        with _SCHEDULES_FILE.open("w", encoding="utf-8") as f:
+        f_path = _schedules_file()
+        f_path.parent.mkdir(parents=True, exist_ok=True)
+        with f_path.open("w", encoding="utf-8") as f:
             yaml.dump(
                 {"schedules": self._rules},
                 f,

@@ -6,17 +6,27 @@ persona.py — 동적 시스템 프롬프트 (페르소나) 모듈
 - RAG 기억 + 페르소나 설정을 결합하여 최종 시스템 프롬프트 생성
 """
 
+import sys
 from pathlib import Path
 import yaml
 from memory import AgentMemory
 
-# 프로젝트 루트 기준 기본 경로 계산
-_DEFAULT_PERSONA_PATH = str(Path(__file__).resolve().parent.parent / "Agent_Workspace" / "persona.yaml")
+
+def _default_persona_path() -> Path:
+    """번들(frozen) 여부에 따라 persona.yaml 경로 반환."""
+    if getattr(sys, 'frozen', False):
+        # exe 옆 Agent_Workspace 우선, 없으면 번들 내장 기본값 사용
+        user_path = Path(sys.executable).parent / "Agent_Workspace" / "persona.yaml"
+        if user_path.exists():
+            return user_path
+        return Path(sys._MEIPASS) / "Agent_Workspace" / "persona.yaml"
+    return Path(__file__).resolve().parent.parent / "Agent_Workspace" / "persona.yaml"
 
 
-def load_persona(path: str = _DEFAULT_PERSONA_PATH) -> dict:
+def load_persona(path: str = None) -> dict:
     """persona.yaml 파일을 읽어 딕셔너리로 반환"""
-    with open(path, "r", encoding="utf-8") as f:
+    resolved = Path(path) if path else _default_persona_path()
+    with open(resolved, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
