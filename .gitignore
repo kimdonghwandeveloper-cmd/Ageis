@@ -79,6 +79,7 @@ Agent_Workspace/.chroma/
 
 # PyInstaller (Phase 5 패키징)
 *.spec
+!ageis-agent.spec
 python_agent/dist/
 python_agent/build/
 
