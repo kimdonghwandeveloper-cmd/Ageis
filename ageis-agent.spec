@@ -13,115 +13,66 @@ if _agent_dir not in sys.path:
 
 # ── 패키지 수집 ───────────────────────────────────────────────────────────────
 
-# bs4: collect_all로 datas / binaries / hiddenimports 전부 수집
-_bs4_datas, _bs4_bins, _bs4_hidden = collect_all('bs4')
 
-# chromadb: config.py가 문자열로 동적 import → 서브모듈 전체 수집 필수
-_chroma_hidden = collect_submodules('chromadb')
-_chroma_datas  = collect_data_files('chromadb')
 
-# tools / agents: sys.path에 추가된 후에 실행되므로 이제 올바르게 수집됨
-_tools_hidden  = collect_submodules('tools')
-_agents_hidden = collect_submodules('agents')
+# -----------------------------------------------------------------------------
+# 5. Dependency Collection (Robust)
+# -----------------------------------------------------------------------------
+# Uvicorn/FastAPI 관련 모든 서브모듈/데이터 수집
+from PyInstaller.utils.hooks import collect_all
+
+datas = []
+binaries = []
+hiddenimports = [
+    # 수동으로 추가할 hiddenimports (collect_all이 놓칠 수 있는 것들)
+    'uvicorn.logging',
+    'uvicorn.loops',
+    'uvicorn.loops.auto',
+    'uvicorn.protocols',
+    'uvicorn.protocols.http',
+    'uvicorn.protocols.http.auto',
+    'uvicorn.protocols.websockets',
+    'uvicorn.protocols.websockets.auto',
+    'uvicorn.lifespan',
+    'uvicorn.lifespan.on',
+    'engineio.async_drivers.asgi', # socket.io 관련
+]
+
+# 패키지 통째로 수집
+for package in ['uvicorn', 'fastapi', 'starlette', 'websockets', 'anyio', 'h11', 'click', 'bs4', 'chromadb']:
+    try:
+        tmp_ret = collect_all(package)
+        datas += tmp_ret[0]
+        binaries += tmp_ret[1]
+        hiddenimports += tmp_ret[2]
+    except Exception:
+        pass
+
+# Agents / Tools 서브모듈 수집
+hiddenimports += collect_submodules('agents')
+hiddenimports += collect_submodules('tools')
+
+# 기타 라이브러리 (명시적)
+hiddenimports += [
+    'ollama',
+    'apscheduler',
+    'watchdog',
+    'faster_whisper',
+    'pyttsx3',
+    'sounddevice',
+    'numpy', # often needed by pandas/chroma
+]
 
 # ── Analysis ──────────────────────────────────────────────────────────────────
 
 a = Analysis(
     [os.path.join(SPECPATH, 'python_agent', 'main.py')],
     pathex=[_agent_dir],  # 절대 경로 사용
-    binaries=[
-        *_bs4_bins,
-    ],
-    datas=[
-        *_bs4_datas,
-        *_chroma_datas,
+    binaries=binaries,    # collect_all 결과 병합
+    datas=datas + [       # collect_all 결과 병합 + 사용자 정의 데이터
         (os.path.join(SPECPATH, 'Agent_Workspace', 'persona.yaml'), 'Agent_Workspace'),
     ],
-    hiddenimports=[
-        # ── bs4 (collect_all 결과) ──────────────────────────────
-        *_bs4_hidden,
-
-        # ── chromadb (전체 서브모듈) ────────────────────────────
-        *_chroma_hidden,
-
-        # ── tools / agents 서브패키지 ───────────────────────────
-        *_tools_hidden,
-        *_agents_hidden,
-
-        # ── gRPC ────────────────────────────────────────────────
-        'grpc',
-        'grpc._channel',
-        'grpc._interceptor',
-        'grpc._utilities',
-        'grpc.experimental',
-
-        # ── LLM ─────────────────────────────────────────────────
-        'ollama',
-
-        # ── onnxruntime ─────────────────────────────────────────
-        'onnxruntime',
-
-        # ── STT ─────────────────────────────────────────────────
-        'faster_whisper',
-        'ctranslate2',
-        'av',
-
-        # ── TTS ─────────────────────────────────────────────────
-        'pyttsx3',
-        'pyttsx3.drivers',
-        'pyttsx3.drivers.sapi5',
-        'pyttsx3.drivers.nsss',
-        'pyttsx3.drivers.espeak',
-        'win32com.client',
-        'win32com.server',
-
-        # ── 오디오 ──────────────────────────────────────────────
-        'sounddevice',
-
-        # ── 스케줄러 ────────────────────────────────────────────
-        'apscheduler',
-        'apscheduler.schedulers.asyncio',
-        'apscheduler.triggers.cron',
-        'apscheduler.triggers.date',
-        'apscheduler.triggers.interval',
-        'apscheduler.executors.asyncio',
-        'apscheduler.executors.pool',
-        'tzlocal',
-
-        # ── 파일 감시 ───────────────────────────────────────────
-        'watchdog',
-        'watchdog.observers',
-        'watchdog.observers.winapi',
-        'watchdog.observers.inotify',
-        'watchdog.observers.fsevents',
-        'watchdog.events',
-
-        # ── FastAPI / uvicorn ───────────────────────────────────
-        'fastapi',
-        'uvicorn',
-        'uvicorn.logging',
-        'uvicorn.loops',
-        'uvicorn.loops.asyncio',
-        'uvicorn.protocols',
-        'uvicorn.protocols.http',
-        'uvicorn.protocols.http.auto',
-        'uvicorn.protocols.websockets',
-        'uvicorn.protocols.websockets.auto',
-        'uvicorn.lifespan',
-        'uvicorn.lifespan.on',
-        'starlette',
-        'starlette.middleware',
-        'starlette.middleware.cors',
-        'anyio',
-        'anyio._backends._asyncio',
-        'websockets',
-        'multipart',
-
-        # ── YAML / HTTP ─────────────────────────────────────────
-        'yaml',
-        'httpx',
-        'httpcore',
-    ],
+    hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -129,6 +80,7 @@ a = Analysis(
     noarchive=False,
     optimize=0,
 )
+
 
 pyz = PYZ(a.pure)
 

@@ -18,7 +18,10 @@ web_ui.py — Ageis Agent Web UI (Phase 7: 자율성 & 스케줄링)
   DELETE /api/watch/{id}       — 감시 규칙 삭제 (Phase 7-B)
   WS   /ws                     — WebSocket 채팅 (텍스트)
 """
+import os
+import sys
 import asyncio
+import json
 import base64
 from contextlib import asynccontextmanager
 
@@ -928,11 +931,27 @@ async def websocket_endpoint(websocket: WebSocket):
 # ─── 진입점 ──────────────────────────────────────────────────────────────
 
 def web_main():
-    print("Starting Web UI on http://localhost:8000")
-    print("Phase 7: Scheduler & Event Monitor enabled")
-    print("Press Ctrl+C to stop.")
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    # Unbuffered Output for PyInstaller/Tauri
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
 
+    print("Starting Web UI on http://localhost:8000", flush=True)
+    print("Phase 7: Scheduler & Event Monitor enabled", flush=True)
+    print("Press Ctrl+C to stop.", flush=True)
+    
+    try:
+        # reload=False is safer for frozen apps
+        uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info", reload=False)
+    except Exception as e:
+        print(f"[FATAL ERROR] Web UI crashed: {e}", flush=True)
+        import traceback
+        traceback.print_exc()
 
 if __name__ == "__main__":
-    web_main()
+    try:
+        web_main()
+    except Exception as e:
+        print(f"[FATAL STARTUP ERROR] {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        input("Press Enter to exit...") # Console mode debugging
