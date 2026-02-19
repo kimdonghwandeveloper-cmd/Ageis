@@ -1,0 +1,20 @@
+{
+    "identifier": "sidecar",
+    "description": "Allow Python sidecar execution",
+    "local": true,
+    "windows": [
+        "main"
+    ],
+    "permissions": [
+        {
+            "identifier": "shell:allow-execute",
+            "allow": [
+                {
+                    "name": "bin/ageis-agent",
+                    "cmd": "",
+                    "sidecar": true
+                }
+            ]
+        }
+    ]
+}

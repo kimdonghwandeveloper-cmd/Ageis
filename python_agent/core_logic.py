@@ -12,6 +12,7 @@ from memory import AgentMemory
 from persona import build_system_prompt
 from tools.file_reader import read_file_tool, write_file_tool
 from tools.web_scraper import web_scrape_tool
+from tools.vision_tool import analyze_image_tool
 from plugin_loader import load_plugins
 
 # 도구 등록
@@ -19,6 +20,7 @@ TOOLS = {
     "read_file": read_file_tool,
     "write_file": write_file_tool,
     "web_scrape": web_scrape_tool,
+    "vision_analyze": analyze_image_tool,
 }
 
 # 플러그인 로드 및 병합

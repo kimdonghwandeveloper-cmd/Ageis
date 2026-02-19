@@ -1,11 +1,34 @@
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import uvicorn
 import asyncio
 from core_logic import handle_chat, handle_task
 from router import classify_intent
 
 app = FastAPI(title="Ageis Agent UI")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:8000",
+        "tauri://localhost",
+        "https://tauri.localhost",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+class ChatRequest(BaseModel):
+    message: str
+
+
+class ChatResponse(BaseModel):
+    response: str
+    intent: str
 
 # HTML/CSS/JS 프론트엔드 (단일 파일)
 HTML_UI = """
@@ -204,6 +227,26 @@ HTML_UI = """
 </body>
 </html>
 """
+
+@app.get("/api/health")
+async def health_check():
+    return {"status": "ok", "version": "0.1.0"}
+
+
+@app.post("/api/chat", response_model=ChatResponse)
+async def api_chat(req: ChatRequest):
+    intent = classify_intent(req.message)
+    response = handle_chat(req.message)
+    return ChatResponse(response=response, intent=intent)
+
+
+@app.post("/api/task", response_model=ChatResponse)
+async def api_task(req: ChatRequest):
+    intent = classify_intent(req.message)
+    loop = asyncio.get_event_loop()
+    response = await loop.run_in_executor(None, handle_task, req.message)
+    return ChatResponse(response=response, intent=intent)
+
 
 @app.get("/", response_class=HTMLResponse)
 async def get_root():

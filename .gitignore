@@ -42,6 +42,7 @@ Thumbs.db
 # IDE
 .idea/
 .vscode/
+.claude/
 *.swp
 *.swo
 
@@ -51,6 +52,10 @@ Agent_Workspace/*
 !Agent_Workspace/persona.yaml
 !Agent_Workspace/plugins/
 !Agent_Workspace/plugins/.gitkeep
+Agent_Workspace/downloads/
+Agent_Workspace/summaries/
+Agent_Workspace/schedules.yaml
+Agent_Workspace/watch_rules.yaml
 
 # Proto auto-generated files (regenerate with generate_proto.py)
 python_agent/agent_pb2.py
@@ -79,3 +84,20 @@ desktop.ini
 
 # uv cache
 .uv/
+
+# Tauri desktop app
+desktop/src-tauri/target/
+desktop/src-tauri/gen/
+desktop/src-tauri/bin/
+
+
+# Node.js / Frontend
+node_modules/
+desktop/node_modules/
+desktop/dist/
+desktop/build/
+desktop/.svelte-kit/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+

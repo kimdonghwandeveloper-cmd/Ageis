@@ -7,7 +7,9 @@ authors = [
     { name = "karl3408", email = "kimdonghwandeveloper@gmail.com" }
 ]
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "pyinstaller>=6.19.0",
+]
 
 [project.scripts]
 ageis = "ageis:main"
