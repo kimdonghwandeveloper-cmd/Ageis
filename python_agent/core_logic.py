@@ -1,66 +1,144 @@
 """
-core_logic.py — Ageis Agent 핵심 로직 (Phase 8: The Society)
+core_logic.py — Ageis Agent 핵심 로직 (Phase 1~8 통합)
 
-UI(CLI, Web, Main)에서 공통으로 사용할 에이전트 인스턴스와 핸들러 함수들을 정의합니다.
-Phase 8에서는 단일 ReAct Agent 대신 Multi-Agent System의 Manager에게 작업을 위임합니다.
+UI(CLI, Web, Scheduler, EventMonitor)에서 공통으로 사용하는
+핸들러 함수들과 에이전트 인스턴스를 정의합니다.
+
+Phase 8에서 Multi-Agent Society가 추가되었으나,
+기존 handle_chat / handle_task / handle_vision / handle_voice는 그대로 유지합니다.
 """
 from datetime import datetime
-from typing import Optional, Dict, Any
+import ollama
 
-from actor import AgentMessage
-from agents.manager import ManagerAgent
+from router import classify_intent
+from react_loop import ReActAgent
 from memory import AgentMemory
+from persona import build_system_prompt
+from tools.file_reader import read_file_tool, write_file_tool
+from tools.web_scraper import web_scrape_tool
+from tools.vision_tool import analyze_image_tool
+from tools.stt_tool import record_and_transcribe_tool, transcribe_file_tool
+from tools.tts_tool import speak_tool
+from plugin_loader import load_plugins
 
-class AgentCore:
-    """
-    UI와 Multi-Agent System 사이의 중개자 (Facade Pattern)
-    """
-    def __init__(
-        self,
-        grpc_client,
-        tools: Dict[str, Any],
-        memory: AgentMemory,
-        persona: Dict[str, Any],
-        manager_agent: ManagerAgent
-    ):
-        self.grpc_client = grpc_client
-        self.tools = tools
-        self.memory = memory
-        self.persona = persona
-        self.manager = manager_agent
+# Phase 8: Multi-Agent Society
+from actor import AgentMessage
+from registry import AgentRegistry
+from agents.manager import ManagerAgent
+from agents.researcher import ResearcherAgent
+from agents.writer import WriterAgent
 
-    def handle_chat(self, user_input: str, stream: bool = False) -> str:
-        """
-        사용자 입력을 Manager Agent에게 전달하고 응답을 받음
-        """
-        print(f"[Core] User Request: {user_input}")
-        
-        # 1. Manager에게 메시지 전송 (가상의 User 송신자)
-        # Manager의 think() 메서드를 직접 호출하거나, 메시지를 보내고 결과를 기다림
-        
-        msg = AgentMessage(
-            sender="User",
-            recipient="Manager",
-            content=user_input,
-            msg_type="REQUEST"
-        )
-        
-        # Manager가 생각하고 답을 줌 (동기식 호출 가정)
-        response = self.manager.receive_message(msg)
-        
-        # 2. 결과 저장
-        self.memory.save(
-            f"[Chat] User: {user_input}\nManager: {response}",
-            metadata={"type": "chat", "timestamp": datetime.now().isoformat()}
-        )
-        
-        return response
+# ─── 도구 등록 ───────────────────────────────────────────────────────────────
 
-    def handle_task(self, user_input: str) -> str:
-        """
-        복합 작업 처리 (현재는 handle_chat과 동일하게 Manager에게 위임)
-        """
-        return self.handle_chat(user_input)
+TOOLS = {
+    "read_file": read_file_tool,
+    "write_file": write_file_tool,
+    "web_scrape": web_scrape_tool,
+    "vision_analyze": analyze_image_tool,
+    "stt_record": record_and_transcribe_tool,
+    "stt_file": transcribe_file_tool,
+    "tts_speak": speak_tool,
+}
 
-# 전역 인스턴스 (main.py에서 초기화 후 주입됨)
-# 모듈 레벨 함수들은 하위 호환성을 위해 유지하되, 실제로는 AgentCore 인스턴스를 사용해야 함
+plugin_tools = load_plugins()
+if plugin_tools:
+    print(f"[Core] Loaded {len(plugin_tools)} plugins: {', '.join(plugin_tools.keys())}")
+    TOOLS.update(plugin_tools)
+
+# ─── 단일 에이전트 (ReAct) ────────────────────────────────────────────────────
+
+memory = AgentMemory()
+agent = ReActAgent(tools=TOOLS, model_name="llama3.2", memory=memory)
+
+# ─── Phase 8: Multi-Agent Society ────────────────────────────────────────────
+
+_registry = AgentRegistry()
+_manager = ManagerAgent()
+_researcher = ResearcherAgent()
+_writer = WriterAgent()
+
+for _a in (_manager, _researcher, _writer):
+    _registry.register(_a)
+
+print(f"[Core] Society Formed: [{_manager.name}, {_researcher.name}, {_writer.name}]")
+
+
+# ─── 핸들러 함수 ─────────────────────────────────────────────────────────────
+
+def handle_chat(user_input: str) -> str:
+    """단순 대화 처리 — ReAct 루프 없이 바로 응답, 페르소나+기억 적용."""
+    print("[Core] Mode: CHAT")
+    system_prompt = build_system_prompt(user_input, memory)
+    response = ollama.chat(
+        model="llama3.2",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_input},
+        ],
+    )
+    answer = response["message"]["content"]
+    memory.save(
+        f"[Chat] User: {user_input}\nAgent: {answer}",
+        metadata={"type": "chat", "timestamp": datetime.now().isoformat()},
+    )
+    return answer
+
+
+def handle_task(user_input: str) -> str:
+    """복합 작업 처리 — ReAct 루프 사용."""
+    print("[Core] Mode: TASK (ReAct)")
+    return agent.run(user_input)
+
+
+def handle_vision(image_path: str = "", base64_image: str = "", prompt: str = "") -> str:
+    """이미지 분석 처리 — llava 모델 직접 호출."""
+    print("[Core] Mode: VISION")
+    result = analyze_image_tool({
+        "path": image_path,
+        "base64_image": base64_image,
+        "prompt": prompt or "이 이미지에 무엇이 있나요? 자세히 설명해주세요.",
+    })
+    memory.save(
+        f"[Vision] prompt={prompt or '(기본 설명)'}\nResult: {result[:200]}",
+        metadata={"type": "vision", "timestamp": datetime.now().isoformat()},
+    )
+    return result
+
+
+def handle_voice(duration_sec: float = 5.0, language: str = "ko", tts_response: bool = True) -> str:
+    """음성 파이프라인 — STT → handle_chat → TTS."""
+    print("[Core] Mode: VOICE")
+    from tools.stt_tool import record_and_transcribe_tool
+    from tools.tts_tool import speak_async
+
+    transcribed = record_and_transcribe_tool({"duration": duration_sec, "language": language})
+    if transcribed.startswith("ERROR:"):
+        return transcribed
+
+    print(f"[Core/VOICE] 인식된 입력: {transcribed!r}")
+    response = handle_chat(transcribed)
+
+    if tts_response:
+        try:
+            speak_async(response)
+        except Exception as e:
+            print(f"[Core/VOICE] TTS 재생 실패: {e}")
+
+    return f"[음성 입력] {transcribed}\n\n{response}"
+
+
+def handle_society(user_input: str) -> str:
+    """멀티에이전트 처리 — Phase 8: Manager → Researcher/Writer 위임."""
+    print("[Core] Mode: SOCIETY (Multi-Agent)")
+    msg = AgentMessage(
+        sender="User",
+        recipient="Manager",
+        content=user_input,
+        msg_type="REQUEST",
+    )
+    result = _manager.receive_message(msg)
+    memory.save(
+        f"[Society] User: {user_input}\nResult: {str(result)[:300]}",
+        metadata={"type": "society", "timestamp": datetime.now().isoformat()},
+    )
+    return result or "멀티에이전트 처리 중 오류가 발생했습니다."

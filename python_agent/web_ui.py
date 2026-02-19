@@ -28,7 +28,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 
-from core_logic import handle_chat, handle_task, handle_vision, handle_voice
+from core_logic import handle_chat, handle_task, handle_vision, handle_voice, handle_society
 from router import classify_intent
 from scheduler import AgentScheduler
 from event_monitor import EventMonitor
@@ -718,8 +718,8 @@ function escHtml(s) {
 async def health_check():
     return {
         "status": "ok",
-        "version": "0.3.0",
-        "phase": "7",
+        "version": "0.4.0",
+        "phase": "8",
         "schedules": len(_scheduler.list_schedules()),
         "watches": len(_monitor.list_watches()),
     }
@@ -848,6 +848,19 @@ async def api_delete_watch(watch_id: str):
     return {"deleted": watch_id}
 
 
+# ── Phase 8: Multi-Agent Society ─────────────────────────────────────────
+
+@app.post("/api/society")
+async def api_society(req: ChatRequest):
+    """
+    Phase 8: 멀티에이전트(Manager → Researcher/Writer) 파이프라인.
+    복잡한 조사·작성 태스크를 여러 전문 에이전트가 협력하여 처리합니다.
+    """
+    loop = asyncio.get_event_loop()
+    result = await loop.run_in_executor(None, handle_society, req.message)
+    return {"response": result, "intent": "SOCIETY"}
+
+
 # ─── WebSocket ────────────────────────────────────────────────────────────
 
 @app.get("/", response_class=HTMLResponse)
@@ -875,6 +888,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 response = "음성 입력을 사용하려면 🎤 버튼을 눌러 주세요."
             elif intent == "SCHEDULE":
                 response = "⚙️ 자동화 탭에서 스케줄을 등록하거나 관리할 수 있습니다."
+            elif intent == "SOCIETY":
+                response = handle_society(user_input)
             else:
                 response = handle_chat(user_input)
 
