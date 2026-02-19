@@ -30,12 +30,17 @@ dependencies = [
     "faster-whisper>=1.1.1",   # 로컬 Whisper STT (CPU/CUDA)
     "sounddevice>=0.5.1",      # 마이크 오디오 캡처 (Windows 친화적)
     "pyttsx3>=2.98",           # 로컬 TTS (Windows SAPI / macOS / Linux espeak)
+    # --- Phase 7-A: Scheduler ---
+    "apscheduler>=3.11.2",     # cron 기반 자율 스케줄러
+    # --- Phase 7-B: Event Monitor ---
+    "watchdog>=6.0.0",         # 파일시스템 이벤트 감시
+    "python-multipart>=0.0.22",
 ]
 
 # setuptools에게 이 프로젝트는 개별 모듈들의 모음임을 명시
 # flat layout에서 자동 탐색 대신 수동 지정
 [tool.setuptools]
-py-modules = ["main", "grpc_client", "generate_proto", "memory", "persona", "router", "react_loop", "plugin_loader", "core_logic", "cli", "web_ui"]  # 최상위 모듈 목록 (tools/ 서브패키지는 아래 find 설정으로 포함)
+py-modules = ["main", "grpc_client", "generate_proto", "memory", "persona", "router", "react_loop", "plugin_loader", "core_logic", "cli", "web_ui", "scheduler", "event_monitor"]  # 최상위 모듈 목록 (tools/ 서브패키지는 아래 find 설정으로 포함)
 
 [tool.setuptools.packages.find]
 include = ["tools*"]              # tools/ 서브패키지 포함

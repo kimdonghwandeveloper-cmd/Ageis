@@ -52,10 +52,20 @@ Agent_Workspace/*
 !Agent_Workspace/persona.yaml
 !Agent_Workspace/plugins/
 !Agent_Workspace/plugins/.gitkeep
-Agent_Workspace/downloads/
-Agent_Workspace/summaries/
+
+# Phase 6: 음성 처리 임시 파일
+*.webm
+*.wav
+*.mp3
+
+# Phase 7: 스케줄러·감시 규칙 (런타임 생성, 커밋 불필요)
 Agent_Workspace/schedules.yaml
 Agent_Workspace/watch_rules.yaml
+
+# 사용자가 watch path로 지정할 수 있는 공통 디렉터리
+Agent_Workspace/downloads/
+Agent_Workspace/summaries/
+Agent_Workspace/inbox/
 
 # Proto auto-generated files (regenerate with generate_proto.py)
 python_agent/agent_pb2.py
@@ -66,6 +76,11 @@ python_agent/agent_pb2_grpc.py
 
 # ChromaDB local data (Phase 3)
 Agent_Workspace/.chroma/
+
+# PyInstaller (Phase 5 패키징)
+*.spec
+python_agent/dist/
+python_agent/build/
 
 # Logs
 *.log

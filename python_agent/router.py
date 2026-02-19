@@ -12,6 +12,7 @@ CLASSIFIER_PROMPT = """
 - PERSONA: 에이전트 설정 변경 (이름, 말투, 규칙 수정 등)
 - VISION: 이미지 분석, 사진 설명, 이미지에 관한 질문 (예: "이 이미지 분석해줘", "사진 설명해줘")
 - VOICE: 음성 입력 처리, 마이크 녹음, 음성으로 명령하기 관련 요청
+- SCHEDULE: 정해진 시간에 자동으로 태스크 실행, 스케줄 등록/삭제/조회 (예: "매일 오전 9시에 뉴스 요약해줘", "스케줄 목록 보여줘")
 
 출력 형식은 오직 카테고리 단어 하나여야 합니다 (예: CHAT). 설명이나 다른 텍스트를 붙이지 마세요.
 
@@ -34,7 +35,7 @@ def classify_intent(user_input: str) -> str:
         category = response['response'].strip().upper()
 
         # 유효한 카테고리인지 1차 검증 (필수는 아니지만 안전장치)
-        valid_categories = {"CHAT", "FILE", "WEB", "TASK", "PERSONA", "VISION", "VOICE"}
+        valid_categories = {"CHAT", "FILE", "WEB", "TASK", "PERSONA", "VISION", "VOICE", "SCHEDULE"}
 
         # 때때로 LLM이 설명과 함께 답할 수 있으므로, 키워드 포함 여부로 보정
         for valid in valid_categories:
