@@ -6,6 +6,25 @@ use tauri_plugin_shell::ShellExt;
 /// 앱 종료 시 사이드카를 kill하기 위해 프로세스 핸들을 관리 상태로 보관
 struct SidecarState(Mutex<Option<CommandChild>>);
 
+/// 사이드카 종료 헬퍼 — 중복 호출 시 두 번째부터는 아무것도 하지 않음 (take() 활용)
+fn kill_sidecar(app_handle: &tauri::AppHandle) {
+    let state = app_handle.state::<SidecarState>();
+    let mut guard = state.0.lock().unwrap();
+    if let Some(child) = guard.take() {
+        let _ = child.kill();
+        println!("[Tauri] Sidecar terminated.");
+    }
+}
+
+#[tauri::command]
+fn log_from_frontend(level: String, message: String) {
+    if level == "error" {
+        eprintln!("[Frontend Error] {}", message);
+    } else {
+        println!("[Frontend Info] {}", message);
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -41,20 +60,24 @@ pub fn run() {
 
             Ok(())
         })
+        .invoke_handler(tauri::generate_handler![log_from_frontend])
         .build(tauri::generate_context!())
         .expect("Ageis Desktop app build failed")
         .run(|app_handle, event| {
-            // 앱 종료 이벤트 감지 -> 사이드카 종료
-            if let tauri::RunEvent::Exit = event {
-                let state = app_handle.state::<SidecarState>();
-                
-                // if let Ok(...) 대신 .lock().unwrap() 사용
-                // 종료 시점이라 패닉해도 무방하며, PoisonError가 발생해도 사실상 종료해야 함
-                let mut guard = state.0.lock().unwrap();
-                if let Some(child) = guard.take() {
-                    let _ = child.kill();
-                    println!("[Tauri] Sidecar terminated.");
+            match event {
+                // 정상 종료 경로
+                tauri::RunEvent::Exit => {
+                    kill_sidecar(app_handle);
                 }
+                // 창이 파괴될 때 (X 버튼, 작업관리자 종료 등 다양한 경로 대응)
+                // kill_sidecar 내부에서 take()로 중복 실행 방지
+                tauri::RunEvent::WindowEvent {
+                    event: tauri::WindowEvent::Destroyed,
+                    ..
+                } => {
+                    kill_sidecar(app_handle);
+                }
+                _ => {}
             }
         });
 }

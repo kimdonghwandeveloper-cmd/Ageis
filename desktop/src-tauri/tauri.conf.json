@@ -8,6 +8,7 @@
     "frontendDist": "../"
   },
   "app": {
+    "withGlobalTauri": true,
     "windows": [
       {
         "title": "Ageis Agent",

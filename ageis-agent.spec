@@ -39,7 +39,7 @@ hiddenimports = [
 ]
 
 # 패키지 통째로 수집
-for package in ['uvicorn', 'fastapi', 'starlette', 'websockets', 'anyio', 'h11', 'click', 'bs4', 'chromadb']:
+for package in ['uvicorn', 'fastapi', 'starlette', 'websockets', 'anyio', 'h11', 'click', 'bs4', 'chromadb', 'ollama']:
     try:
         tmp_ret = collect_all(package)
         datas += tmp_ret[0]

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,7 +12,14 @@
             --user-msg-bg: #0f3460;
             --agent-msg-bg: #e94560;
             --text-color: #eee;
+            --accent: #e94560;
+            --accent2: #4fc3f7;
         }
+
+        * {
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: var(--bg-color);
@@ -22,190 +30,906 @@
             height: 100vh;
             justify-content: center;
             align-items: center;
-            user-select: none; /* Desktop app feel */
+            user-select: none;
         }
+
         .container {
             width: 100%;
             height: 100%;
             background-color: var(--chat-bg);
+            border-radius: 0;
+            box-shadow: none;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
+
         header {
-            padding: 20px;
-            background-color: rgba(0,0,0,0.2);
+            padding: 12px 20px;
+            background-color: rgba(0, 0, 0, 0.25);
             text-align: center;
             border-bottom: 1px solid #333;
-            -webkit-app-region: drag; /* Draggable window */
+            flex-shrink: 0;
+            -webkit-app-region: drag;
         }
-        h1 { margin: 0; font-size: 1.5rem; color: var(--agent-msg-bg); }
-        .subtitle { font-size: 0.8rem; opacity: 0.7; }
-        
+
+        h1 {
+            margin: 0;
+            font-size: 1.3rem;
+            color: var(--accent);
+        }
+
+        .subtitle {
+            font-size: 0.72rem;
+            opacity: 0.7;
+            margin-top: 2px;
+        }
+
+        /* ── 탭 ── */
+        .tabs {
+            display: flex;
+            background: rgba(0, 0, 0, 0.15);
+            border-bottom: 1px solid #333;
+            flex-shrink: 0;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            background: none;
+            border: none;
+            color: #aaa;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: bold;
+            border-bottom: 2px solid transparent;
+            transition: color 0.2s, border-color 0.2s;
+        }
+
+        .tab-btn.active {
+            color: var(--accent2);
+            border-bottom-color: var(--accent2);
+        }
+
+        .tab-btn:hover:not(.active) {
+            color: #ddd;
+        }
+
+        .tab-panel {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .tab-panel.active {
+            display: flex;
+        }
+
+        /* ── 채팅 탭 ── */
         #chat-box {
             flex: 1;
-            padding: 20px;
+            padding: 16px 20px;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 10px;
         }
-        
+
         .message {
-            max-width: 80%;
-            padding: 12px 16px;
+            max-width: 82%;
+            padding: 9px 13px;
             border-radius: 12px;
             line-height: 1.5;
             word-wrap: break-word;
-            animation: fadeIn 0.3s ease;
+            animation: fadeIn 0.2s ease;
+            font-size: 0.92rem;
             user-select: text;
         }
-        
+
         .user {
             align-self: flex-end;
             background-color: var(--user-msg-bg);
             border-bottom-right-radius: 2px;
         }
-        
+
         .agent {
             align-self: flex-start;
-            background-color: rgba(255,255,255,0.1);
+            background-color: rgba(255, 255, 255, 0.09);
             border-bottom-left-radius: 2px;
         }
 
         .system {
             align-self: center;
-            font-size: 0.8rem;
+            font-size: 0.74rem;
             color: #888;
             background: none;
         }
-        
-        .input-area {
-            padding: 20px;
-            background-color: rgba(0,0,0,0.2);
-            display: flex;
-            gap: 10px;
+
+        .message img {
+            max-width: 100%;
+            border-radius: 6px;
+            margin-top: 6px;
+            display: block;
         }
-        
-        input {
+
+        .input-area {
+            padding: 12px 18px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 7px;
+            align-items: center;
+        }
+
+        #msg-input {
             flex: 1;
-            padding: 12px;
+            padding: 9px 12px;
             border-radius: 6px;
             border: 1px solid #444;
             background-color: var(--bg-color);
             color: white;
             outline: none;
+            font-size: 0.92rem;
         }
-        
-        button {
-            padding: 10px 20px;
-            background-color: var(--agent-msg-bg);
+
+        /* ── 버튼 공통 ── */
+        .btn {
+            padding: 8px 14px;
             color: white;
             border: none;
             border-radius: 6px;
             cursor: pointer;
             font-weight: bold;
-            transition: background 0.2s;
+            transition: background 0.2s, opacity 0.2s;
+            white-space: nowrap;
+            font-size: 0.87rem;
         }
-        button:hover { background-color: #c0354c; }
-        button:disabled { background-color: #555; cursor: wait; }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: wait;
+        }
+
+        .btn-send {
+            background-color: var(--accent);
+        }
+
+        .btn-send:hover:not(:disabled) {
+            background-color: #c0354c;
+        }
+
+        .btn-img {
+            background-color: #2a6496;
+        }
+
+        .btn-img:hover:not(:disabled) {
+            background-color: #1d4e75;
+        }
+
+        .btn-voice {
+            background-color: #2e7d32;
+        }
+
+        .btn-voice:hover:not(:disabled) {
+            background-color: #1b5e20;
+        }
+
+        .btn-voice.recording {
+            background-color: #b71c1c;
+            animation: pulse 1s infinite;
+        }
+
+        .btn-danger {
+            background-color: #c62828;
+        }
+
+        .btn-danger:hover {
+            background-color: #b71c1c;
+        }
+
+        .btn-primary {
+            background-color: #1565c0;
+        }
+
+        .btn-primary:hover {
+            background-color: #0d47a1;
+        }
+
+        /* ── 이미지 프리뷰 바 ── */
+        #img-preview-bar {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 8px;
+            background: rgba(42, 100, 150, 0.22);
+            border-radius: 6px;
+            font-size: 0.8rem;
+        }
+
+        #img-preview-bar img {
+            width: 36px;
+            height: 36px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        #img-preview-bar span {
+            flex: 1;
+            opacity: 0.85;
+        }
+
+        #img-clear-btn {
+            background: none;
+            border: none;
+            color: #f44336;
+            cursor: pointer;
+            font-size: 0.95rem;
+            padding: 0 4px;
+        }
+
+        /* ── 자동화 탭 ── */
+        .auto-panel {
+            flex: 1;
+            overflow-y: auto;
+            padding: 18px 22px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .auto-section {
+            background: rgba(0, 0, 0, 0.18);
+            border-radius: 10px;
+            padding: 16px 18px;
+        }
+
+        .auto-section h3 {
+            margin: 0 0 12px;
+            font-size: 1rem;
+            color: var(--accent2);
+        }
+
+        .form-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .form-row label {
+            font-size: 0.78rem;
+            opacity: 0.75;
+            display: block;
+            margin-bottom: 3px;
+        }
+
+        .form-input {
+            padding: 7px 10px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background: var(--bg-color);
+            color: white;
+            font-size: 0.85rem;
+            min-width: 140px;
+        }
+
+        .form-input.wide {
+            flex: 1;
+            min-width: 220px;
+        }
+
+        .rule-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            margin-top: 10px;
+        }
+
+        .rule-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 0.82rem;
+        }
+
+        .rule-item .rule-info {
+            flex: 1;
+        }
+
+        .rule-item .rule-cron {
+            color: var(--accent2);
+            font-family: monospace;
+        }
+
+        .rule-item .rule-task {
+            opacity: 0.85;
+            margin-top: 2px;
+        }
+
+        .rule-item .rule-meta {
+            font-size: 0.72rem;
+            opacity: 0.5;
+        }
+
+        .empty-state {
+            color: #666;
+            font-size: 0.83rem;
+            text-align: center;
+            padding: 12px 0;
+        }
+
+        /* ── 애니메이션 ── */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(3px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.55;
+            }
+        }
+
+        .agent pre {
+            background: #111;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+
+        .agent code {
+            font-family: monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 4px;
+            border-radius: 3px;
+        }
+
+        /* ── 상태 표시 ── */
+        #status {
+            font-size: 0.68rem;
+            color: #ff9800;
+            margin-top: 3px;
+        }
     </style>
 </head>
+
 <body>
     <div class="container">
         <header>
             <h1>🤖 Ageis Desktop</h1>
-            <div class="subtitle">Phase 5: The Face</div>
-            <div id="status" style="font-size: 0.7rem; color: #ff9800; margin-top: 5px;">● Connecting to Agent...</div>
+            <div class="subtitle">Phase 7: The Legs — Scheduler &amp; Event Monitor</div>
+            <div id="status">● Connecting to Agent...</div>
         </header>
-        
-        <div id="chat-box"></div>
-        
-        <div class="input-area">
-            <input id="msg-input" type="text" placeholder="메시지를 입력하세요..." onkeypress="if(event.key==='Enter') sendMessage()" disabled>
-            <button id="send-btn" onclick="sendMessage()" disabled>전송</button>
+
+        <!-- 탭 버튼 -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('chat', event)">💬 채팅</button>
+            <button class="tab-btn" onclick="switchTab('auto', event)">⚙️ 자동화</button>
+        </div>
+
+        <!-- ── 채팅 탭 ─────────────────────────────────────────── -->
+        <div id="tab-chat" class="tab-panel active">
+            <div id="chat-box"></div>
+            <div class="input-area">
+                <div id="img-preview-bar">
+                    <img id="img-thumb" src="" alt="preview">
+                    <span id="img-name">이미지 첨부됨</span>
+                    <button id="img-clear-btn" title="첨부 취소">✕</button>
+                </div>
+                <div class="input-row">
+                    <input id="msg-input" type="text" placeholder="메시지 입력 / 이미지·마이크 버튼 사용..."
+                        onkeypress="if(event.key==='Enter') sendMessage()" disabled>
+                    <button class="btn btn-img" id="img-btn" title="이미지 첨부" onclick="triggerImageUpload()"
+                        disabled>🖼</button>
+                    <button class="btn btn-voice" id="voice-btn" title="음성 입력" onclick="toggleVoice()"
+                        disabled>🎤</button>
+                    <button class="btn btn-send" id="send-btn" onclick="sendMessage()" disabled>전송</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── 자동화 탭 ──────────────────────────────────────── -->
+        <div id="tab-auto" class="tab-panel">
+            <div class="auto-panel">
+
+                <!-- 7-A: 스케줄러 -->
+                <div class="auto-section">
+                    <h3>⏰ 스케줄러 (시간 기반 자동 실행)</h3>
+                    <div class="form-row">
+                        <div>
+                            <label>Cron 표현식</label>
+                            <input class="form-input" id="sch-cron" placeholder="0 9 * * 1-5" style="width:160px">
+                        </div>
+                        <div style="flex:1">
+                            <label>실행할 태스크</label>
+                            <input class="form-input wide" id="sch-task"
+                                placeholder="뉴스 요약해서 Agent_Workspace/news.txt에 저장해줘">
+                        </div>
+                        <div style="align-self:flex-end">
+                            <button class="btn btn-primary" onclick="addSchedule()">+ 추가</button>
+                        </div>
+                    </div>
+                    <div style="font-size:0.74rem;opacity:0.55;margin-bottom:8px;">
+                        예시: <code>0 9 * * 1-5</code> 평일 09:00 &nbsp;|&nbsp; <code>*/30 * * * *</code> 30분마다
+                        &nbsp;|&nbsp; <code>0 0 * * *</code> 매일 자정
+                    </div>
+                    <div id="schedule-list" class="rule-list">
+                        <div class="empty-state">등록된 스케줄이 없습니다.</div>
+                    </div>
+                </div>
+
+                <!-- 7-B: 파일 감시 -->
+                <div class="auto-section">
+                    <h3>👁️ 파일 감시 (이벤트 기반 자동 실행)</h3>
+                    <div class="form-row">
+                        <div>
+                            <label>감시 경로</label>
+                            <input class="form-input" id="wt-path" placeholder="Agent_Workspace/downloads"
+                                style="width:200px">
+                        </div>
+                        <div>
+                            <label>파일 패턴</label>
+                            <input class="form-input" id="wt-pattern" placeholder="*.pdf" style="width:100px">
+                        </div>
+                        <div>
+                            <label>이벤트</label>
+                            <select class="form-input" id="wt-event" style="width:110px">
+                                <option value="created">생성 (created)</option>
+                                <option value="modified">수정 (modified)</option>
+                                <option value="deleted">삭제 (deleted)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div style="flex:1">
+                            <label>실행할 태스크 (<code>{file}</code> = 파일 경로 자동 치환)</label>
+                            <input class="form-input wide" id="wt-task"
+                                placeholder="{file} 파일을 요약해서 Agent_Workspace/summaries/ 에 저장해줘">
+                        </div>
+                        <div style="align-self:flex-end">
+                            <button class="btn btn-primary" onclick="addWatch()">+ 추가</button>
+                        </div>
+                    </div>
+                    <div id="watch-list" class="rule-list">
+                        <div class="empty-state">등록된 감시 규칙이 없습니다.</div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
 
+    <!-- 숨겨진 파일 입력 -->
+    <input type="file" id="img-file-input" accept="image/*" style="display:none" onchange="onImageSelected(event)">
+
     <script>
+        // ─── 탭 전환 ─────────────────────────────────────────────────────────────
+        function switchTab(name, e) {
+            document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            document.getElementById("tab-" + name).classList.add("active");
+            e.currentTarget.classList.add("active");
+            if (name === "auto") loadAutomation();
+        }
+
+        // ─── WebSocket (절대 URL — Desktop 사이드카 연결) ──────────────────────────
+        const BASE_HTTP = "http://localhost:8000";
+        const BASE_WS = "ws://localhost:8000";
+
+        let ws = null;
+        let reconnectDelay = 1000;
+        let pingInterval = null;
+        let healthRetries = 0;
+        const MAX_HEALTH_RETRIES = 30; // 30 × 2초 = 최대 60초 대기
+
         const chatBox = document.getElementById("chat-box");
         const msgInput = document.getElementById("msg-input");
         const sendBtn = document.getElementById("send-btn");
+        const imgBtn = document.getElementById("img-btn");
+        const voiceBtn = document.getElementById("voice-btn");
         const statusDiv = document.getElementById("status");
-        
-        let ws = null;
-        let reconnectInterval = 1000;
 
-        function connect() {
-            // Python Sidecar runs Web UI on port 8000
-            ws = new WebSocket("ws://localhost:8000/ws");
+        // ─── Tauri Logging ───────────────────────────────────────────────────────
+        const isTauri = !!window.__TAURI__;
+        function tauriLog(level, msg) {
+            if (isTauri) {
+                window.__TAURI__.core.invoke("log_from_frontend", { level, message: String(msg) }).catch(console.error);
+            }
+            console[level === "error" ? "error" : "log"](msg);
+        }
+
+        window.addEventListener('error', (e) => {
+            tauriLog("error", `Global Error: ${e.message} at ${e.filename}:${e.lineno}`);
+        });
+        window.addEventListener('unhandledrejection', (e) => {
+            tauriLog("error", `Unhandled Promise: ${e.reason}`);
+        });
+
+        // ─── 서버 헬스 체크 후 WebSocket 연결 ──────────────────────────────────
+        async function waitForHealth() {
+            if (healthRetries >= MAX_HEALTH_RETRIES) {
+                statusDiv.innerHTML = "● 서버 시작 실패";
+                statusDiv.style.color = "#f44336";
+                addMsg("⚠️ 에이전트 서버를 시작할 수 없습니다. 앱을 재시작해주세요.", "system");
+                tauriLog("error", "Health check timeout: server did not start within 60 seconds.");
+                return;
+            }
+            healthRetries++;
+            statusDiv.innerHTML = `● 서버 준비 중... (${healthRetries}/${MAX_HEALTH_RETRIES})`;
+            statusDiv.style.color = "#ff9800";
+            try {
+                const ctrl = new AbortController();
+                const t = setTimeout(() => ctrl.abort(), 3000);
+                const res = await fetch(`${BASE_HTTP}/api/health`, { signal: ctrl.signal });
+                clearTimeout(t);
+                if (res.ok) { connectWs(); return; }
+            } catch (e) { /* 서버 아직 준비 안 됨 */ }
+            setTimeout(waitForHealth, 2000);
+        }
+
+        function connectWs() {
+            tauriLog("info", `Attempting WebSocket connection to ${BASE_WS}/ws`);
+            ws = new WebSocket(`${BASE_WS}/ws`);
 
             ws.onopen = () => {
-                statusDiv.innerHTML = "● Online";
-                statusDiv.style.color = "#4caf50";
-                addMessage("에이전트와 연결되었습니다.", "system");
-                msgInput.disabled = false;
-                sendBtn.disabled = false;
-                reconnectInterval = 1000;
+                tauriLog("info", "WebSocket connected successfully");
+                setStatus(true);
+                addMsg("에이전트와 연결되었습니다.", "system");
+                enableInput();
+                reconnectDelay = 1000;
+                // 킵얼라이브 ping 시작 (25초마다 — 유휴 타임아웃 방지)
+                if (pingInterval) clearInterval(pingInterval);
+                pingInterval = setInterval(() => {
+                    if (ws && ws.readyState === WebSocket.OPEN) {
+                        ws.send("__ping__");
+                    }
+                }, 25000);
             };
 
-            ws.onclose = () => {
-                statusDiv.innerHTML = "● Offline (Retrying...)";
-                statusDiv.style.color = "#f44336";
-                msgInput.disabled = true;
-                sendBtn.disabled = true;
-                // Auto-reconnect
-                setTimeout(connect, reconnectInterval);
-                reconnectInterval = Math.min(reconnectInterval * 2, 5000);
+            ws.onclose = (e) => {
+                tauriLog("error", `WebSocket closed. Code: ${e.code}, Reason: ${e.reason}`);
+                if (pingInterval) { clearInterval(pingInterval); pingInterval = null; }
+                setStatus(false);
+                addMsg("연결이 끊어졌습니다. 재연결 시도 중...", "system");
+                disableInput();
+                setTimeout(connectWs, reconnectDelay);
+                reconnectDelay = Math.min(reconnectDelay + 1000, 3000);
             };
 
-            ws.onerror = (err) => {
-                console.error("Socket encountered error: ", err.message, "Closing socket");
+            ws.onerror = (e) => {
+                tauriLog("error", "WebSocket error occurred. (See Developer Tools for details)");
                 ws.close();
             };
 
-            ws.onmessage = (event) => {
-                addMessage(event.data, "agent");
-                sendBtn.disabled = false;
-                msgInput.disabled = false;
-                msgInput.focus();
+            ws.onmessage = (e) => {
+                if (e.data === "__pong__") return; // 킵얼라이브 응답 무시
+                addMsg(e.data, "agent");
+                enableInput();
             };
         }
 
-        function addMessage(text, sender) {
+        function connect() {
+            waitForHealth();
+        }
+
+        function setStatus(ok) {
+            statusDiv.innerHTML = ok ? "● Online" : "● Offline (Retrying...)";
+            statusDiv.style.color = ok ? "#4caf50" : "#f44336";
+        }
+        function disableInput() {
+            sendBtn.disabled = msgInput.disabled = imgBtn.disabled = voiceBtn.disabled = true;
+        }
+        function enableInput() {
+            sendBtn.disabled = msgInput.disabled = imgBtn.disabled = voiceBtn.disabled = false;
+            msgInput.focus();
+        }
+
+        // ─── 메시지 추가 ──────────────────────────────────────────────────────────
+        function addMsg(text, sender, imgSrc) {
             const div = document.createElement("div");
             div.className = `message ${sender}`;
-            if (sender === 'agent') {
-                div.innerHTML = text.replace(/\n/g, '<br>');
+            if (sender === "agent") {
+                div.innerHTML = text.replace(/\n/g, "<br>");
             } else {
                 div.textContent = text;
             }
+            if (imgSrc) {
+                const img = document.createElement("img");
+                img.src = imgSrc;
+                div.appendChild(img);
+            }
             chatBox.appendChild(div);
-            // Auto scroll
-            requestAnimationFrame(() => {
-                chatBox.scrollTop = chatBox.scrollHeight;
-            });
+            requestAnimationFrame(() => { chatBox.scrollTop = chatBox.scrollHeight; });
         }
+
+        // ─── 텍스트 전송 ──────────────────────────────────────────────────────────
+        let pendingImageB64 = "";
 
         function sendMessage() {
             const text = msgInput.value.trim();
+            if (pendingImageB64) {
+                const prompt = text || "이 이미지에 무엇이 있나요? 자세히 설명해주세요.";
+                addMsg(prompt, "user", "data:image/*;base64," + pendingImageB64);
+                disableInput();
+                sendVisionRequest(pendingImageB64, prompt);
+                clearImageAttachment();
+                msgInput.value = "";
+                return;
+            }
             if (!text) return;
-            
-            addMessage(text, "user");
+            addMsg(text, "user");
             if (ws && ws.readyState === WebSocket.OPEN) {
                 ws.send(text);
                 msgInput.value = "";
-                sendBtn.disabled = true;
-                msgInput.disabled = true;
+                disableInput();
             } else {
-                addMessage("에이전트와 연결되어 있지 않습니다.", "system");
+                addMsg("에이전트와 연결되어 있지 않습니다.", "system");
             }
         }
 
-        // Connect on load
+        // ─── Vision ───────────────────────────────────────────────────────────────
+        function triggerImageUpload() { document.getElementById("img-file-input").click(); }
+
+        function onImageSelected(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const b64full = e.target.result;
+                pendingImageB64 = b64full.split(",")[1];
+                document.getElementById("img-thumb").src = b64full;
+                document.getElementById("img-name").textContent = file.name;
+                document.getElementById("img-preview-bar").style.display = "flex";
+            };
+            reader.readAsDataURL(file);
+            event.target.value = "";
+        }
+
+        document.getElementById("img-clear-btn").onclick = clearImageAttachment;
+        function clearImageAttachment() {
+            pendingImageB64 = "";
+            document.getElementById("img-preview-bar").style.display = "none";
+        }
+
+        async function sendVisionRequest(b64, prompt) {
+            addMsg("이미지 분석 중...", "system");
+            try {
+                const res = await fetch(`${BASE_HTTP}/api/vision`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ base64_image: b64, prompt }),
+                });
+                const data = await res.json();
+                addMsg(data.response, "agent");
+            } catch (e) {
+                addMsg("이미지 분석 실패: " + e, "agent");
+            }
+            enableInput();
+        }
+
+        // ─── Voice ────────────────────────────────────────────────────────────────
+        let isRecording = false, mediaRecorder = null, audioChunks = [];
+
+        async function toggleVoice() {
+            isRecording ? stopRecording() : await startRecording();
+        }
+
+        async function startRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioChunks = [];
+                mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunks.push(e.data); };
+                mediaRecorder.onstop = sendAudioToSTT;
+                mediaRecorder.start();
+                isRecording = true;
+                voiceBtn.classList.add("recording");
+                addMsg("🎤 녹음 중... (다시 클릭하면 종료)", "system");
+            } catch (e) {
+                addMsg("마이크 접근 실패: " + e, "system");
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state !== "inactive") {
+                mediaRecorder.stop();
+                mediaRecorder.stream.getTracks().forEach(t => t.stop());
+            }
+            isRecording = false;
+            voiceBtn.classList.remove("recording");
+        }
+
+        async function sendAudioToSTT() {
+            addMsg("음성 인식 중...", "system");
+            disableInput();
+            const blob = new Blob(audioChunks, { type: "audio/webm" });
+            const formData = new FormData();
+            formData.append("file", blob, "voice.webm");
+            formData.append("language", "ko");
+            try {
+                const res = await fetch(`${BASE_HTTP}/api/voice/upload`, { method: "POST", body: formData });
+                const data = await res.json();
+                if (data.transcribed) addMsg("[음성] " + data.transcribed, "user");
+                addMsg(data.response, "agent");
+            } catch (e) {
+                addMsg("음성 처리 실패: " + e, "agent");
+            }
+            enableInput();
+        }
+
+        // ─── 클립보드 이미지 붙여넣기 ────────────────────────────────────────────
+        document.addEventListener("paste", (e) => {
+            const items = e.clipboardData && e.clipboardData.items;
+            if (!items) return;
+            for (const item of items) {
+                if (item.type.startsWith("image/")) {
+                    const file = item.getAsFile();
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        const b64full = ev.target.result;
+                        pendingImageB64 = b64full.split(",")[1];
+                        document.getElementById("img-thumb").src = b64full;
+                        document.getElementById("img-name").textContent = "클립보드 이미지";
+                        document.getElementById("img-preview-bar").style.display = "flex";
+                    };
+                    reader.readAsDataURL(file);
+                    break;
+                }
+            }
+        });
+
+        // ─── 자동화 탭: Scheduler & EventMonitor ─────────────────────────────────
+
+        async function loadAutomation() {
+            await Promise.all([loadSchedules(), loadWatches()]);
+        }
+
+        // ── 스케줄러 ──
+
+        async function loadSchedules() {
+            try {
+                const res = await fetch(`${BASE_HTTP}/api/schedules`);
+                const data = await res.json();
+                renderSchedules(data.schedules || []);
+            } catch (e) {
+                document.getElementById("schedule-list").innerHTML =
+                    '<div class="empty-state">서버에 연결할 수 없습니다.</div>';
+            }
+        }
+
+        function renderSchedules(list) {
+            const el = document.getElementById("schedule-list");
+            if (!list.length) {
+                el.innerHTML = '<div class="empty-state">등록된 스케줄이 없습니다.</div>';
+                return;
+            }
+            el.innerHTML = list.map(r => `
+        <div class="rule-item">
+            <div class="rule-info">
+                <div class="rule-cron">🕐 ${r.cron}</div>
+                <div class="rule-task">${escHtml(r.task)}</div>
+                <div class="rule-meta">ID: ${r.id.slice(0, 8)}… | 등록: ${r.created_at}</div>
+            </div>
+            <button class="btn btn-danger" onclick="deleteSchedule('${r.id}')">삭제</button>
+        </div>`).join("");
+        }
+
+        async function addSchedule() {
+            const cron = document.getElementById("sch-cron").value.trim();
+            const task = document.getElementById("sch-task").value.trim();
+            if (!cron || !task) { alert("Cron 표현식과 태스크를 모두 입력해주세요."); return; }
+            const res = await fetch(`${BASE_HTTP}/api/schedule`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ cron, task }),
+            });
+            if (res.ok) {
+                document.getElementById("sch-cron").value = "";
+                document.getElementById("sch-task").value = "";
+                await loadSchedules();
+            } else {
+                const err = await res.json();
+                alert("등록 실패: " + (err.detail || JSON.stringify(err)));
+            }
+        }
+
+        async function deleteSchedule(id) {
+            if (!confirm("이 스케줄을 삭제할까요?")) return;
+            await fetch(`${BASE_HTTP}/api/schedule/${id}`, { method: "DELETE" });
+            await loadSchedules();
+        }
+
+        // ── 파일 감시 ──
+
+        async function loadWatches() {
+            try {
+                const res = await fetch(`${BASE_HTTP}/api/watches`);
+                const data = await res.json();
+                renderWatches(data.watches || []);
+            } catch (e) {
+                document.getElementById("watch-list").innerHTML =
+                    '<div class="empty-state">서버에 연결할 수 없습니다.</div>';
+            }
+        }
+
+        function renderWatches(list) {
+            const el = document.getElementById("watch-list");
+            if (!list.length) {
+                el.innerHTML = '<div class="empty-state">등록된 감시 규칙이 없습니다.</div>';
+                return;
+            }
+            const evtIcon = { created: "🟢", modified: "🟡", deleted: "🔴" };
+            el.innerHTML = list.map(r => `
+        <div class="rule-item">
+            <div class="rule-info">
+                <div class="rule-cron">${evtIcon[r.event] || "●"} ${escHtml(r.path)} &nbsp;<code>${escHtml(r.pattern)}</code> &nbsp;on <b>${r.event}</b></div>
+                <div class="rule-task">${escHtml(r.task)}</div>
+                <div class="rule-meta">ID: ${r.id.slice(0, 8)}… | 등록: ${r.created_at}</div>
+            </div>
+            <button class="btn btn-danger" onclick="deleteWatch('${r.id}')">삭제</button>
+        </div>`).join("");
+        }
+
+        async function addWatch() {
+            const path = document.getElementById("wt-path").value.trim();
+            const pattern = document.getElementById("wt-pattern").value.trim() || "*";
+            const event = document.getElementById("wt-event").value;
+            const task = document.getElementById("wt-task").value.trim();
+            if (!path || !task) { alert("감시 경로와 태스크를 입력해주세요."); return; }
+            const res = await fetch(`${BASE_HTTP}/api/watch`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ path, pattern, event, task }),
+            });
+            if (res.ok) {
+                document.getElementById("wt-path").value = "";
+                document.getElementById("wt-pattern").value = "";
+                document.getElementById("wt-task").value = "";
+                await loadWatches();
+            } else {
+                const err = await res.json();
+                alert("등록 실패: " + (err.detail || JSON.stringify(err)));
+            }
+        }
+
+        async function deleteWatch(id) {
+            if (!confirm("이 감시 규칙을 삭제할까요?")) return;
+            await fetch(`${BASE_HTTP}/api/watch/${id}`, { method: "DELETE" });
+            await loadWatches();
+        }
+
+        function escHtml(s) {
+            return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        // ─── 진입점 ───────────────────────────────────────────────────────────────
         connect();
     </script>
 </body>
+
 </html>

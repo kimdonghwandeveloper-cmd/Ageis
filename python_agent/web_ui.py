@@ -25,7 +25,7 @@ import json
 import base64
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, WebSocket, UploadFile, File, Form
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Form
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -731,9 +731,9 @@ async def health_check():
 @app.post("/api/chat", response_model=ChatResponse)
 async def api_chat(req: ChatRequest):
     intent = classify_intent(req.message)
-    
+
     # Intent-based Routing
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     
     if intent == "SOCIETY":
         # Multi-Agent
@@ -751,7 +751,7 @@ async def api_chat(req: ChatRequest):
 @app.post("/api/task", response_model=ChatResponse)
 async def api_task(req: ChatRequest):
     intent = classify_intent(req.message)
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     response = await loop.run_in_executor(None, handle_task, req.message)
     return ChatResponse(response=response, intent=intent)
 
@@ -760,7 +760,7 @@ async def api_task(req: ChatRequest):
 
 @app.post("/api/vision")
 async def api_vision(req: VisionRequest):
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     result = await loop.run_in_executor(None, handle_vision, "", req.base64_image, req.prompt)
     return {"response": result}
 
@@ -772,7 +772,7 @@ async def api_vision_file(
 ):
     raw = await file.read()
     b64 = base64.b64encode(raw).decode("utf-8")
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     result = await loop.run_in_executor(None, handle_vision, "", b64, prompt)
     return {"response": result, "filename": file.filename}
 
@@ -781,7 +781,7 @@ async def api_vision_file(
 
 @app.post("/api/voice")
 async def api_voice(req: VoiceRequest):
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     result = await loop.run_in_executor(None, handle_voice, req.duration, req.language, req.tts_response)
     return {"response": result}
 
@@ -802,7 +802,7 @@ async def api_voice_upload(
         transcribed = transcribe_file_tool({"path": tmp_path, "language": language})
         if transcribed.startswith("ERROR:"):
             return {"response": transcribed, "transcribed": ""}
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         answer = await loop.run_in_executor(None, handle_chat, transcribed)
         return {"response": answer, "transcribed": transcribed}
     finally:
@@ -872,7 +872,7 @@ async def api_society(req: ChatRequest):
     Phase 8: 멀티에이전트(Manager → Researcher/Writer) 파이프라인.
     복잡한 조사·작성 태스크를 여러 전문 에이전트가 협력하여 처리합니다.
     """
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     result = await loop.run_in_executor(None, handle_society, req.message)
     return {"response": result, "intent": "SOCIETY"}
 
@@ -884,51 +884,104 @@ async def get_root():
     return HTML_UI
 
 
+
+# 디버그 로깅 헬퍼
+def log_error(msg):
+    import time
+    try:
+        with open("sidecar_debug.log", "a", encoding="utf-8") as f:
+            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] ERROR: {msg}\n")
+    except:
+        pass
+
+def log_info(msg):
+    import time
+    try:
+        with open("sidecar_debug.log", "a", encoding="utf-8") as f:
+            f.write(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] INFO: {msg}\n")
+    except:
+        pass
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    loop = asyncio.get_event_loop()
-    while True:
-        try:
-            user_input = await websocket.receive_text()
+    log_info(f"{websocket.client.host}:{websocket.client.port} - \"WebSocket /ws\" [accepted]")
+    log_info("connection open")
+    
+    try:
+        while True:
+            data = await websocket.receive_text()
 
-            # 의도 분류 (blocking → executor)
-            intent = await loop.run_in_executor(None, classify_intent, user_input)
+            # 킵얼라이브 ping 처리 (클라이언트 타임아웃 방지)
+            if data == "__ping__":
+                await websocket.send_text("__pong__")
+                continue
 
-            if intent == "PERSONA":
-                response = "persona.yaml 파일을 직접 수정한 후 재시작해 주세요."
-            elif intent == "VISION":
-                response = "이미지를 분석하려면 🖼 버튼으로 이미지를 첨부해 주세요."
-            elif intent == "VOICE":
-                response = "음성 입력을 사용하려면 🎤 버튼을 눌러 주세요."
-            elif intent == "SCHEDULE":
-                response = "⚙️ 자동화 탭에서 스케줄을 등록하거나 관리할 수 있습니다."
-            elif intent == "SOCIETY":
-                # 멀티에이전트 파이프라인 (blocking → executor)
-                response = await loop.run_in_executor(None, handle_society, user_input)
-            elif intent in ("FILE", "WEB", "TASK"):
-                # ReAct 루프 (blocking → executor)
-                response = await loop.run_in_executor(None, handle_task, user_input)
-            else:
-                # CHAT: 단순 대화 (blocking → executor)
-                response = await loop.run_in_executor(None, handle_chat, user_input)
-
-            await websocket.send_text(response)
-
-        except Exception as e:
-            err_msg = str(e)
-            print(f"[WebSocket Error] {err_msg}")
-            # WebSocket 연결 끊김(disconnect)이면 루프 종료
-            if "disconnect" in err_msg.lower() or "1000" in err_msg or "1001" in err_msg:
-                break
-            # 그 외 처리 오류는 사용자에게 에러 메시지 전송 후 계속
+            # 1. Intent Classification
+            # Blocking I/O를 별도 스레드에서 실행
+            loop = asyncio.get_running_loop()
+            
             try:
-                await websocket.send_text(f"[오류] 처리 중 문제가 발생했습니다: {err_msg}")
-            except Exception:
-                break
+                # A. 분류
+                intent = await loop.run_in_executor(None, classify_intent, data)
+                log_info(f"Received: {data[:50]}... -> Intent: {intent}")
+                
+                # B. 처리 (Intent에 따라 분기)
+                if intent == "SOCIETY":
+                    response = await loop.run_in_executor(None, handle_society, data)
+                elif intent in ["FILE", "WEB", "TASK"]:
+                    response = await loop.run_in_executor(None, handle_task, data)
+                else:
+                    # CHAT or Unknown
+                    response = await loop.run_in_executor(None, handle_chat, data)
+                    
+                await websocket.send_text(response)
+                
+            except Exception as e:
+                err_msg = f"Processing Error: {str(e)}"
+                log_error(err_msg)
+                import traceback
+                log_error(traceback.format_exc())
+                await websocket.send_text(f"Error: {str(e)}")
 
+    except WebSocketDisconnect:
+        log_info("connection closed")
+    except Exception as e:
+        log_error(f"WebSocket Critical Error: {str(e)}")
+        import traceback
+        log_error(traceback.format_exc())
+def free_port(port: int):
+    """PowerShell Get-NetTCPConnection으로 정확한 포트 매칭 후 좀비 프로세스 종료."""
+    import platform, subprocess, time
+    if platform.system() != "Windows":
+        return
+    try:
+        ps_cmd = (
+            f"Get-NetTCPConnection -LocalPort {port} -State Listen "
+            f"-ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess"
+        )
+        result = subprocess.check_output(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_cmd],
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+        ).decode().strip()
 
-# ─── 진입점 ──────────────────────────────────────────────────────────────
+        my_pid = str(os.getpid())
+        killed = False
+        for pid_str in result.splitlines():
+            pid_str = pid_str.strip()
+            if pid_str and pid_str != "0" and pid_str != my_pid:
+                print(f"[포트 {port} 해제] 좀비 프로세스(PID: {pid_str}) 종료 중...", flush=True)
+                subprocess.call(
+                    ["taskkill", "/F", "/PID", pid_str],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                killed = True
+        if killed:
+            time.sleep(1.0)  # OS가 포트를 실제로 반납할 때까지 대기
+    except Exception as e:
+        print(f"[free_port] 경고: {e}", flush=True)
 
 def web_main():
     # Unbuffered Output for PyInstaller/Tauri
@@ -938,7 +991,26 @@ def web_main():
     print("Starting Web UI on http://localhost:8000", flush=True)
     print("Phase 7: Scheduler & Event Monitor enabled", flush=True)
     print("Press Ctrl+C to stop.", flush=True)
-    
+
+    # 포트 8000 확보 — 최대 3번 시도 (좀비 프로세스 제거 후 재시도)
+    import socket, time
+    port_secured = False
+    for attempt in range(1, 4):
+        free_port(8000)
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                s.bind(("0.0.0.0", 8000))
+            port_secured = True
+            break
+        except OSError:
+            print(f"[포트 확보 재시도] {attempt}/3 실패 — 2초 후 재시도...", flush=True)
+            time.sleep(2)
+
+    if not port_secured:
+        print("[FATAL] 포트 8000을 확보할 수 없습니다. 다른 앱이 점유 중인지 확인하세요.", flush=True)
+        return
+
     try:
         # reload=False is safer for frozen apps
         uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info", reload=False)

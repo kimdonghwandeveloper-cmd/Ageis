@@ -6,13 +6,15 @@ readme = "README.md"
 authors = [
     { name = "karl3408", email = "kimdonghwandeveloper@gmail.com" }
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 dependencies = [
     "apscheduler>=3.11.2",
     "beautifulsoup4>=4.14.3",
+    "chromadb>=1.5.0",
     "fastapi>=0.129.0",
     "faster-whisper>=1.2.1",
     "lxml>=6.0.2",
+    "ollama>=0.6.1",
     "pyinstaller>=6.19.0",
     "python-multipart>=0.0.22",
     "pyttsx3>=2.99",
