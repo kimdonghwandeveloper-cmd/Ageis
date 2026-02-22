@@ -14,7 +14,7 @@ from router import classify_intent
 from react_loop import ReActAgent
 from memory import AgentMemory
 from persona import build_system_prompt
-from tools.file_reader import read_file_tool, write_file_tool
+from tools.file_reader import read_file_tool, write_file_tool, list_dir_tool
 from tools.web_scraper import web_scrape_tool
 from tools.web_search import web_search_tool
 from tools.vision_tool import analyze_image_tool
@@ -34,6 +34,7 @@ from agents.writer import WriterAgent
 TOOLS = {
     "read_file": read_file_tool,
     "write_file": write_file_tool,
+    "list_dir": list_dir_tool,
     "web_search": web_search_tool,
     "web_scrape": web_scrape_tool,
     "vision_analyze": analyze_image_tool,
