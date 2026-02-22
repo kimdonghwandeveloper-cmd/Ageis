@@ -35,6 +35,7 @@ dependencies = [
     # --- Phase 7-B: Event Monitor ---
     "watchdog>=6.0.0",         # 파일시스템 이벤트 감시
     "python-multipart>=0.0.22",
+    "duckduckgo-search>=7.0",      # 무료 웹 검색 (API 키 불필요)
     "pyinstaller>=6.19.0",
 ]
 
