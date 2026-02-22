@@ -5,24 +5,30 @@ from datetime import datetime
 
 MAX_ITERATIONS = 10
 
-REACT_SYSTEM_PROMPT = """
-당신은 도구를 사용하여 사용자의 요청을 수행하는 지능형 에이전트입니다.
-사용 가능한 도구는 다음과 같습니다:
+REACT_SYSTEM_PROMPT = """You are an intelligent agent that uses tools to complete user requests.
 
+LANGUAGE RULE: Always respond in Korean (한국어). All Thought and Final Answer text must be in Korean. Do NOT mix English sentences into Thought or Final Answer.
+
+Available tools:
 {tool_descriptions}
 
-문제를 해결하기 위해 다음 형식을 엄격히 따르십시오:
+You MUST follow this exact format, one step at a time. Do NOT skip steps or combine multiple steps:
 
-Thought: [현재 상황을 분석하고 다음에 무엇을 해야 할지 생각]
-Action: [실행할 도구의 이름]
-Action Input: [도구에 전달할 JSON 형식의 입력값]
-Observation: [도구 실행 결과]
-... (필요한 만큼 Thought/Action/Observation 반복)
-Final Answer: [사용자에게 전달할 최종 답변]
+Thought: [한국어로 현재 상황 분석 및 다음 행동 계획]
+Action: [tool_name_exactly_as_listed]
+Action Input: {{"key": "value"}}
 
-알 수 없는 도구를 사용하지 마십시오.
-모든 Action Input은 반드시 유효한 JSON 형식이어야 합니다.
-Final Answer를 찾았다면 더 이상 Action을 생성하지 마십시오.
+Wait for the Observation before continuing. After receiving the Observation, write the next Thought.
+When you have enough information, write:
+
+Final Answer: [한국어로 최종 답변]
+
+STRICT RULES:
+- Do NOT write "Observation:" yourself. The system provides it.
+- Action must be one of the listed tool names exactly (no spaces, no extra text).
+- Action Input must be valid JSON on a single line.
+- Do NOT generate multiple Action steps at once.
+- If a tool is not needed, go directly to Final Answer.
 """
 
 class ReActAgent:
