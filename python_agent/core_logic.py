@@ -115,14 +115,20 @@ def handle_voice(duration_sec: float = 5.0, language: str = "ko", tts_response: 
     if transcribed.startswith("ERROR:"):
         return transcribed
 
-    print(f"[Core/VOICE] 인식된 입력: {transcribed!r}")
+    try:
+        print(f"[Core/VOICE] 인식된 입력: {transcribed!r}".encode('utf-8', 'replace').decode('utf-8'))
+    except:
+        pass
     response = handle_chat(transcribed)
 
     if tts_response:
         try:
             speak_async(response)
         except Exception as e:
-            print(f"[Core/VOICE] TTS 재생 실패: {e}")
+            try:
+                print(f"[Core/VOICE] TTS 재생 실패: {e}".encode('utf-8', 'replace').decode('utf-8'))
+            except:
+                pass
 
     return f"[음성 입력] {transcribed}\n\n{response}"
 

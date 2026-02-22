@@ -545,7 +545,7 @@
         let reconnectDelay = 1000;
         let pingInterval = null;
         let healthRetries = 0;
-        const MAX_HEALTH_RETRIES = 30; // 30 × 2초 = 최대 60초 대기
+        const MAX_HEALTH_RETRIES = 150; // 150 × 2초 = 최대 5분 대기 (PyInstaller 초기화 시간 고려)
 
         const chatBox = document.getElementById("chat-box");
         const msgInput = document.getElementById("msg-input");

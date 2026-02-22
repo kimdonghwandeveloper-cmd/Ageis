@@ -435,9 +435,28 @@ const sendBtn   = document.getElementById("send-btn");
 const statusDiv = document.getElementById("status");
 const voiceBtn  = document.getElementById("voice-btn");
 
-ws.onopen  = () => { setStatus(true);  addMsg("시스템에 연결되었습니다.", "system"); };
-ws.onclose = () => { setStatus(false); addMsg("연결이 끊어졌습니다. 새로고침 해주세요.", "system"); disableInput(); };
-ws.onmessage = (e) => { addMsg(e.data, "agent"); enableInput(); };
+let wsPingInterval = null;
+
+ws.onopen  = () => {
+    setStatus(true);
+    addMsg("시스템에 연결되었습니다.", "system");
+    // 25초마다 ping — AI 생성 중 브라우저 idle timeout 방지
+    if (wsPingInterval) clearInterval(wsPingInterval);
+    wsPingInterval = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) ws.send("__ping__");
+    }, 25000);
+};
+ws.onclose = () => {
+    setStatus(false);
+    addMsg("연결이 끊어졌습니다. 새로고침 해주세요.", "system");
+    disableInput();
+    if (wsPingInterval) { clearInterval(wsPingInterval); wsPingInterval = null; }
+};
+ws.onmessage = (e) => {
+    if (e.data === "__pong__") return; // 킵얼라이브 응답 무시
+    addMsg(e.data, "agent");
+    enableInput();
+};
 
 function setStatus(ok) {
     statusDiv.innerHTML = ok ? "● Connected" : "● Disconnected";
@@ -902,6 +921,9 @@ def log_info(msg):
     except:
         pass
 
+# 백그라운드 태스크가 가비지 컬렉터(GC)에 의해 강제 종료되는 것을 방지하기 위한 참조 Set
+active_ws_tasks = set()
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -917,32 +939,39 @@ async def websocket_endpoint(websocket: WebSocket):
                 await websocket.send_text("__pong__")
                 continue
 
-            # 1. Intent Classification
-            # Blocking I/O를 별도 스레드에서 실행
-            loop = asyncio.get_running_loop()
-            
-            try:
-                # A. 분류
-                intent = await loop.run_in_executor(None, classify_intent, data)
-                log_info(f"Received: {data[:50]}... -> Intent: {intent}")
-                
-                # B. 처리 (Intent에 따라 분기)
-                if intent == "SOCIETY":
-                    response = await loop.run_in_executor(None, handle_society, data)
-                elif intent in ["FILE", "WEB", "TASK"]:
-                    response = await loop.run_in_executor(None, handle_task, data)
-                else:
-                    # CHAT or Unknown
-                    response = await loop.run_in_executor(None, handle_chat, data)
+            # 1. 메시지 처리 함수 분리 (Background Task용)
+            async def process_message(user_text: str):
+                loop = asyncio.get_running_loop()
+                try:
+                    # A. 분류
+                    intent = await loop.run_in_executor(None, classify_intent, user_text)
+                    log_info(f"Received: {user_text[:50]}... -> Intent: {intent}")
                     
-                await websocket.send_text(response)
-                
-            except Exception as e:
-                err_msg = f"Processing Error: {str(e)}"
-                log_error(err_msg)
-                import traceback
-                log_error(traceback.format_exc())
-                await websocket.send_text(f"Error: {str(e)}")
+                    # B. 처리 (Intent에 따라 분기)
+                    if intent == "SOCIETY":
+                        response = await loop.run_in_executor(None, handle_society, user_text)
+                    elif intent in ["FILE", "WEB", "TASK"]:
+                        response = await loop.run_in_executor(None, handle_task, user_text)
+                    else:
+                        response = await loop.run_in_executor(None, handle_chat, user_text)
+                        
+                    await websocket.send_text(response)
+                    
+                except Exception as e:
+                    err_msg = f"Processing Error: {str(e)}"
+                    log_error(err_msg)
+                    import traceback
+                    log_error(traceback.format_exc())
+                    try:
+                        await websocket.send_text(f"Error: {str(e)}")
+                    except Exception:
+                        pass  # 웹소켓이 이미 닫혔으면 무시
+
+            # Blocking I/O를 별도 태스크로 던져서 receive_text() 루프가 막히지 않게 함
+            # 파이썬 GC 이슈 방지: 백그라운드 태스크를 셋에 저장하고 완료시 버림
+            task = asyncio.create_task(process_message(data))
+            active_ws_tasks.add(task)
+            task.add_done_callback(active_ws_tasks.discard)
 
     except WebSocketDisconnect:
         log_info("connection closed")

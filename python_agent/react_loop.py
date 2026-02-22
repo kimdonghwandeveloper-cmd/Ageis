@@ -45,7 +45,10 @@ class ReActAgent:
 
     def run(self, task: str) -> str:
         """사용자 태스크를 받아 ReAct 루프를 실행하고 최종 답변을 반환합니다."""
-        print(f"\n[ReAct] Task started: {task}")
+        try:
+            print(f"\n[ReAct] Task started: {task}".encode('utf-8', 'replace').decode('utf-8'))
+        except:
+            pass
 
         # 시스템 프롬프트 구성: 페르소나+기억 + 도구 설명 결합
         react_prompt = REACT_SYSTEM_PROMPT.format(tool_descriptions=self.tool_desc_str)
@@ -63,13 +66,24 @@ class ReActAgent:
         ]
         
         for iteration in range(MAX_ITERATIONS):
-            print(f"[ReAct] Iteration {iteration + 1}...")
+            try:
+                print(f"[ReAct] Iteration {iteration + 1}...")
+            except:
+                pass
             
             # 1. LLM 호출
-            response = ollama.chat(model=self.model_name, messages=messages)
+            # stop=["Observation:"] — LLM이 도구 결과를 스스로 만들어내는 환각 방지
+            response = ollama.chat(
+                model=self.model_name,
+                messages=messages,
+                options={"stop": ["Observation:"]},
+            )
             output = response["message"]["content"]
             
-            print(f"[ReAct] LLM Output:\n{output}\n")
+            try:
+                print(f"[ReAct] LLM Output:\n{output}\n".encode('utf-8', 'replace').decode('utf-8'))
+            except:
+                pass
             
             # 대화 기록에 추가 (Assistant의 응답)
             messages.append({"role": "assistant", "content": output})
@@ -91,7 +105,10 @@ class ReActAgent:
             if action:
                 # 4. 도구 실행
                 if action in self.tools:
-                    print(f"[ReAct] Executing Tool: {action} with input {action_input}")
+                    try:
+                        print(f"[ReAct] Executing Tool: {action} with input {action_input}".encode('utf-8', 'replace').decode('utf-8'))
+                    except:
+                        pass
                     try:
                         observation = self.tools[action](action_input)
                     except Exception as e:
@@ -99,7 +116,10 @@ class ReActAgent:
                 else:
                     observation = f"Error: Tool '{action}' not found. Available tools: {list(self.tools.keys())}"
                 
-                print(f"[ReAct] Observation: {observation[:200]}..." if len(observation) > 200 else f"[ReAct] Observation: {observation}")
+                try:
+                    print(f"[ReAct] Observation: {observation[:200]}..." if len(observation) > 200 else f"[ReAct] Observation: {observation}".encode('utf-8', 'replace').decode('utf-8'))
+                except:
+                    pass
 
                 # 5. Observation을 User 역할로 메시지에 추가 (Self-Correction 유도)
                 obs_message = f"Observation: {observation}"

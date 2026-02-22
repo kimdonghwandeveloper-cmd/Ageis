@@ -117,3 +117,5 @@ npm-debug.log
 yarn-error.log
 pnpm-debug.log
 
+# Debugging Guide
+DEBUGGING_GUIDE.md
