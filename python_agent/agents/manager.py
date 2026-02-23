@@ -1,6 +1,7 @@
 import json
 import ollama
 from actor import AgentActor, AgentMessage
+from config import MODEL_NAME
 
 
 class ManagerAgent(AgentActor):
@@ -38,7 +39,7 @@ class ManagerAgent(AgentActor):
 
         # fix: format은 ollama.chat() 최상위 인자로 전달해야 함
         response = ollama.chat(
-            model="llama3.2",
+            model=MODEL_NAME,
             format="json",
             messages=[{"role": "user", "content": prompt}],
         )

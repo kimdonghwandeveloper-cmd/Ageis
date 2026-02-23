@@ -39,7 +39,7 @@ STRICT RULES:
 """
 
 class ReActAgent:
-    def __init__(self, tools: dict, model_name: str = "llama3.2", memory=None):
+    def __init__(self, tools: dict, model_name: str = "qwen2.5:7b", memory=None):
         self.tools = tools          # {"tool_name": function}
         self.model_name = model_name
         self.memory = memory        # AgentMemory 인스턴스 (Phase 3)

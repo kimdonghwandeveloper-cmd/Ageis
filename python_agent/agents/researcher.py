@@ -2,6 +2,7 @@ import ollama
 from actor import AgentActor, AgentMessage
 from tools.web_scraper import web_scrape_tool
 from tools.file_reader import read_file_tool
+from config import MODEL_NAME
 
 
 class ResearcherAgent(AgentActor):
@@ -35,7 +36,7 @@ class ResearcherAgent(AgentActor):
 도구가 불필요하면 바로 답변을 작성하세요."""
 
         plan_response = ollama.chat(
-            model="llama3.2",
+            model=MODEL_NAME,
             messages=[{"role": "user", "content": prompt_plan}],
         )
         plan_text = plan_response["message"]["content"]
@@ -68,7 +69,7 @@ class ResearcherAgent(AgentActor):
 
 팩트 위주로 간결하게 정리해주세요."""
             synth = ollama.chat(
-                model="llama3.2",
+                model=MODEL_NAME,
                 messages=[{"role": "user", "content": synthesis_prompt}],
             )
             answer = synth["message"]["content"]

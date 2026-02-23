@@ -1,5 +1,6 @@
 import ollama
 import json
+from config import MODEL_NAME
 
 CLASSIFIER_PROMPT = """
 당신은 사용자 입력을 분석하여 적절한 파이프라인으로 라우팅하는 분류기입니다.
@@ -26,7 +27,7 @@ def classify_intent(user_input: str) -> str:
     """
     try:
         response = ollama.generate(
-            model="llama3.2",
+            model=MODEL_NAME,
             prompt=CLASSIFIER_PROMPT.format(user_input=user_input),
             options={
                 "temperature": 0.0,  # 결정적인(deterministic) 결과를 위해 0 설정

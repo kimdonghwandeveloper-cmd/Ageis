@@ -1,5 +1,6 @@
 import ollama
 from actor import AgentActor, AgentMessage
+from config import MODEL_NAME
 
 
 class WriterAgent(AgentActor):
@@ -26,7 +27,7 @@ class WriterAgent(AgentActor):
         """
         prompt = f"[System] {self.persona}\n[Request] {message.content}"
         response = ollama.chat(
-            model="llama3.2",
+            model=MODEL_NAME,
             messages=[{"role": "user", "content": prompt}],
         )
         answer = response["message"]["content"]

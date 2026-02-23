@@ -10,6 +10,7 @@ Phase 8에서 Multi-Agent Society가 추가되었으나,
 from datetime import datetime
 import ollama
 
+from config import MODEL_NAME
 from router import classify_intent
 from react_loop import ReActAgent
 from memory import AgentMemory
@@ -51,7 +52,7 @@ if plugin_tools:
 # ─── 단일 에이전트 (ReAct) ────────────────────────────────────────────────────
 
 memory = AgentMemory()
-agent = ReActAgent(tools=TOOLS, model_name="llama3.2", memory=memory)
+agent = ReActAgent(tools=TOOLS, model_name=MODEL_NAME, memory=memory)
 
 # ─── Phase 8: Multi-Agent Society ────────────────────────────────────────────
 
@@ -73,7 +74,7 @@ def handle_chat(user_input: str) -> str:
     print("[Core] Mode: CHAT")
     system_prompt = build_system_prompt(user_input, memory)
     response = ollama.chat(
-        model="llama3.2",
+        model=MODEL_NAME,
         messages=[
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_input},
