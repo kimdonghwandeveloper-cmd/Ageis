@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  ageis-agent:
+    build: .
+    container_name: ageis-backend
+    ports:
+      - "8000:8000"
+    environment:
+      # 파이썬 에이전트가 옆에 띄워진 ollama 컨테이너와 통신하도록 주소 설정
+      - OLLAMA_HOST=http://ollama:11434
+    volumes:
+      # 호스트의 Agent_Workspace를 컨테이너와 동기화하여 파일 저장 보존
+      - ./Agent_Workspace:/app/Agent_Workspace
+    depends_on:
+      - ollama
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ageis-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      # 초기화 후에도 다운로드 받은 AI 모델들을 유지하기 위한 도커 볼륨
+      - ollama_data:/root/.ollama
+    # GPU(NVIDIA)가 있는 경우 아래 주석을 활성화하여 AI 응답 속도를 높일 수 있습니다.
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+volumes:
+  ollama_data:
