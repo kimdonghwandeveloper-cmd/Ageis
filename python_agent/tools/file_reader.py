@@ -25,6 +25,15 @@ def _is_system_path(path: Path) -> bool:
     return any(p.startswith(b) for b in blocked)
 
 
+def _human_size(size_bytes: int) -> str:
+    """바이트를 사람이 읽기 쉬운 단위로 변환합니다."""
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if size_bytes < 1024:
+            return f"{size_bytes:.1f} {unit}" if unit != "B" else f"{size_bytes} B"
+        size_bytes /= 1024
+    return f"{size_bytes:.1f} PB"
+
+
 def _resolve(requested_path: str) -> tuple:
     """
     요청 경로를 절대 경로로 변환하고 접근 허용 여부를 검증합니다.
@@ -87,7 +96,7 @@ def read_file_tool(args: dict) -> str:
 
     # 토큰 과부하 방지: 10000자 초과 시 앞부분만 반환
     if len(text) > 10000:
-        return text[:10000] + f"\n\n... (파일이 너무 큽니다. 앞 10000자만 표시, 전체 {len(text)}자)"
+        return text[:10000] + f"\n\n... (파일이 너무 큽니다. 앞 10000자만 표시, 전체 크기: {_human_size(target.stat().st_size)})"
     return text
 
 
@@ -157,7 +166,7 @@ def list_dir_tool(args: dict) -> str:
         lines = [f"📁 {target}", ""]
         for entry in entries[:200]:  # 최대 200개
             icon = "📁" if entry.is_dir() else "📄"
-            size = f"  ({entry.stat().st_size:,} bytes)" if entry.is_file() else ""
+            size = f"  ({_human_size(entry.stat().st_size)})" if entry.is_file() else ""
             lines.append(f"  {icon} {entry.name}{size}")
         if len(entries) > 200:
             lines.append(f"  ... 외 {len(entries) - 200}개")
