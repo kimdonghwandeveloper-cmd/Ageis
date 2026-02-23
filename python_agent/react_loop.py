@@ -36,6 +36,42 @@ STRICT RULES:
 - Action Input must be valid JSON on a single line.
 - Do NOT generate multiple Actions at once.
 - If no tool is needed, go directly to Final Answer.
+
+---
+
+EXAMPLES (follow this pattern exactly):
+
+[Example 1 — 디렉토리 탐색]
+User: 바탕화면에 뭐가 있어?
+
+Thought: 사용자의 바탕화면 폴더 내용을 확인해야 합니다.
+Action: list_dir
+Action Input: {{"path": "Desktop"}}
+
+(시스템이 Observation 제공)
+
+Thought: 결과를 사용자에게 정리해서 전달합니다.
+Final Answer: 바탕화면에는 다음 파일들이 있습니다: ...
+
+---
+
+[Example 2 — 웹 검색 후 파일 저장]
+User: 오늘 환율 검색해서 바탕화면에 저장해줘
+
+Thought: 먼저 오늘 환율 정보를 웹에서 검색합니다.
+Action: web_search
+Action Input: {{"query": "오늘 원달러 환율"}}
+
+(시스템이 Observation 제공)
+
+Thought: 검색 결과를 바탕화면에 텍스트 파일로 저장합니다.
+Action: write_file
+Action Input: {{"path": "Desktop/환율.txt", "content": "..."}}
+
+(시스템이 Observation 제공)
+
+Thought: 파일 저장이 완료되었습니다.
+Final Answer: 오늘 환율 정보를 바탕화면의 환율.txt에 저장했습니다.
 """
 
 class ReActAgent:
