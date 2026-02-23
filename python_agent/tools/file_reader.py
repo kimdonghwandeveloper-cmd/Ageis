@@ -43,7 +43,12 @@ def _resolve(requested_path: str) -> tuple:
 
     반환: (Path | None, 거부 사유 str)
     """
-    raw = Path(requested_path)
+    # 빈 경로 또는 ~ → 홈 디렉토리
+    if not requested_path or requested_path.strip() in ("", ".", "~"):
+        return Path.home().resolve(), ""
+
+    # ~/ 또는 ~\로 시작하는 경로 처리
+    raw = Path(requested_path.strip()).expanduser()
 
     if raw.is_absolute():
         target = raw.resolve()
@@ -147,7 +152,7 @@ def list_dir_tool(args: dict) -> str:
     pattern = args.get("pattern", "*")
 
     if not path_str:
-        return "ERROR: 'path' 인수가 필요합니다."
+        path_str = "~"  # 기본값: 홈 디렉토리
 
     target, reason = _resolve(path_str)
     if target is None:
@@ -173,3 +178,62 @@ def list_dir_tool(args: dict) -> str:
         return "\n".join(lines)
     except Exception as e:
         return f"ERROR: 디렉토리 목록 조회 실패 — {e}"
+
+
+def dir_size_tool(args: dict) -> str:
+    """
+    디렉토리 내 하위 폴더/파일들의 크기를 계산하여 큰 순서로 정렬해 반환합니다.
+    '용량이 큰 폴더', '무거운 폴더', '디스크 많이 쓰는 폴더' 를 찾을 때 사용하세요.
+
+    Args:
+        args: {"path": "조사할 디렉토리 경로 (기본값: 홈 디렉토리)", "top": 10}
+
+    예시:
+        {"path": "~"}
+        {"path": "C:/Users/karl3", "top": 5}
+    """
+    path_str = args.get("path", "~") or "~"
+    top_n = int(args.get("top", 10))
+
+    target, reason = _resolve(path_str)
+    if target is None:
+        return f"ERROR: {reason}"
+    if not target.exists() or not target.is_dir():
+        return f"ERROR: 디렉토리를 찾을 수 없습니다 — '{target}'"
+
+    def calc_size(p: Path) -> int:
+        total = 0
+        try:
+            for f in p.rglob("*"):
+                try:
+                    if f.is_file():
+                        total += f.stat().st_size
+                except (PermissionError, OSError):
+                    pass
+        except (PermissionError, OSError):
+            pass
+        return total
+
+    try:
+        entries = [e for e in target.iterdir()]
+        sizes = []
+        for entry in entries:
+            try:
+                if entry.is_dir():
+                    size = calc_size(entry)
+                    sizes.append((entry.name, size, "📁"))
+                elif entry.is_file():
+                    size = entry.stat().st_size
+                    sizes.append((entry.name, size, "📄"))
+            except (PermissionError, OSError):
+                pass
+
+        sizes.sort(key=lambda x: x[1], reverse=True)
+
+        lines = [f"📊 '{target}' 용량 순위 (상위 {top_n}개)", ""]
+        for i, (name, size, icon) in enumerate(sizes[:top_n], 1):
+            lines.append(f"  {i}. {icon} {name}  —  {_human_size(size)}")
+        return "\n".join(lines)
+
+    except Exception as e:
+        return f"ERROR: 크기 계산 실패 — {e}"

@@ -125,7 +125,11 @@ class ReActAgent:
             response = ollama.chat(
                 model=self.model_name,
                 messages=messages,
-                options={"stop": ["Observation:"]},
+                options={
+                    "stop": ["Observation:"],
+                    "temperature": 0.1,   # 낮을수록 지시 준수율 높아짐 (언어 혼입 방지)
+                    "num_ctx": 4096,      # 컨텍스트 상한 고정 (메모리 과부하 방지)
+                },
             )
             output = response["message"]["content"]
             
@@ -179,7 +183,7 @@ class ReActAgent:
                 if iteration == MAX_ITERATIONS - 1:
                     break
                 # 계속 진행하도록 유도
-                messages.append({"role": "user", "content": "Observation: 형식을 지켜주세요. Action과 Action Input을 명시하거나 Final Answer를 내놓으세요."})
+                messages.append({"role": "user", "content": "Observation: 형식을 지켜주세요. 반드시 한국어로만 응답하세요. Action과 Action Input을 명시하거나 Final Answer를 작성하세요. 중국어/영어 혼용 금지."})
 
         return "최대 반복 횟수에 도달했습니다. 작업을 완료하지 못했을 수 있습니다."
 

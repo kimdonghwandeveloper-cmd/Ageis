@@ -37,8 +37,9 @@ except ImportError:
 
 
 # Whisper 모델 크기: tiny / base / small / medium / large
-# base가 속도와 정확도의 균형이 좋음 (첫 실행 시 자동 다운로드)
-WHISPER_MODEL_SIZE = "base"
+# tiny (~39MB): 메모리 제한 환경에서 안정적
+# base (~145MB): 속도와 정확도의 균형 (RAM 여유 있을 때)
+WHISPER_MODEL_SIZE = "tiny"
 SAMPLE_RATE = 16000   # Whisper 권장 샘플레이트
 CHANNELS = 1          # 모노
 
