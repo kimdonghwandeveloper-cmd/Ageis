@@ -1,4 +1,5 @@
-from duckduckgo_search import DDGS
+import os
+from tavily import TavilyClient
 
 def web_search_tool(args: dict) -> str:
     """
@@ -14,9 +15,14 @@ def web_search_tool(args: dict) -> str:
     if not query:
         return "ERROR: 'query' argument is required."
 
+    api_key = os.environ.get("TAVILY_API_KEY", "")
+    if not api_key:
+        return "ERROR: TAVILY_API_KEY 환경변수가 설정되지 않았습니다."
+
     try:
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=max_results))
+        client = TavilyClient(api_key=api_key)
+        response = client.search(query=query, max_results=max_results)
+        results = response.get("results", [])
 
         if not results:
             return "검색 결과가 없습니다."
@@ -24,8 +30,8 @@ def web_search_tool(args: dict) -> str:
         lines = []
         for i, r in enumerate(results, 1):
             lines.append(f"[{i}] {r.get('title', '(제목 없음)')}")
-            lines.append(f"    URL: {r.get('href', '')}")
-            lines.append(f"    요약: {r.get('body', '')[:200]}")
+            lines.append(f"    URL: {r.get('url', '')}")
+            lines.append(f"    요약: {r.get('content', '')[:200]}")
             lines.append("")
         return "\n".join(lines)
 
