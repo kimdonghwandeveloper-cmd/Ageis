@@ -1017,7 +1017,7 @@ def web_main():
     sys.stdout.reconfigure(encoding='utf-8')
     sys.stderr.reconfigure(encoding='utf-8')
 
-    print("Starting Web UI on http://localhost:8000", flush=True)
+    print("Starting Web UI on http://127.0.0.1:8000", flush=True)
     print("Phase 7: Scheduler & Event Monitor enabled", flush=True)
     print("Press Ctrl+C to stop.", flush=True)
 
@@ -1029,7 +1029,7 @@ def web_main():
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                s.bind(("0.0.0.0", 8000))
+                s.bind(("127.0.0.1", 8000))
             port_secured = True
             break
         except OSError:
@@ -1042,7 +1042,7 @@ def web_main():
 
     try:
         # reload=False is safer for frozen apps
-        uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info", reload=False)
+        uvicorn.run(app, host="127.0.0.1", port=8000, log_level="info", reload=False)
     except Exception as e:
         print(f"[FATAL ERROR] Web UI crashed: {e}", flush=True)
         import traceback

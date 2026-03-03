@@ -1,7 +1,7 @@
 use std::sync::Mutex;
 use tauri::Manager;
 use tauri_plugin_shell::process::CommandChild;
-use tauri_plugin_shell::ShellExt;
+
 
 /// 앱 종료 시 사이드카를 kill하기 위해 프로세스 핸들을 관리 상태로 보관
 struct SidecarState(Mutex<Option<CommandChild>>);
